@@ -8,7 +8,7 @@ function sendToOpenWRT(commands) {
       conn.exec(commands.join(' && '), (err, stream) => {
         if (err) throw err;
         stream
-          .on('close', (code, signal) => {
+          .on('close', () => {
             console.log('🔒 SSH bağlantısı kapatıldı.');
             conn.end();
           })
@@ -28,4 +28,5 @@ function sendToOpenWRT(commands) {
     });
 }
 
+// 🔥 Bu satır çok önemli!
 module.exports = sendToOpenWRT;

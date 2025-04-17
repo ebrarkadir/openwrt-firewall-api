@@ -12,8 +12,8 @@ function buildPortBlockingCommands({ portRange, protocol }) {
   ];
 }
 
-function buildPortForwardingCommands({ sourceIP, destIP, sourcePort, destPort, protocol }) {
-  const ruleName = `forward_${protocol}_${sourcePort || 'any'}_${destPort}_${Date.now()}`;
+function buildPortForwardingCommands({ sourceIP, destinationIP, sourcePort, destinationPort, protocol }) {
+  const ruleName = `forward_${protocol}_${sourcePort || 'any'}_${destinationPort}_${Date.now()}`;
 
   const commands = [
     `uci add firewall redirect`,
@@ -21,8 +21,8 @@ function buildPortForwardingCommands({ sourceIP, destIP, sourcePort, destPort, p
     `uci set firewall.@redirect[-1].src='wan'`,
     `uci set firewall.@redirect[-1].dest='lan'`,
     `uci set firewall.@redirect[-1].proto='${protocol.toLowerCase()}'`,
-    `uci set firewall.@redirect[-1].dest_ip='${destIP}'`,
-    `uci set firewall.@redirect[-1].dest_port='${destPort}'`,
+    `uci set firewall.@redirect[-1].dest_ip='${destinationIP}'`,
+    `uci set firewall.@redirect[-1].dest_port='${destinationPort}'`,
     `uci set firewall.@redirect[-1].target='DNAT'`,
   ];
 
@@ -44,3 +44,4 @@ module.exports = {
   buildPortBlockingCommands,
   buildPortForwardingCommands,
 };
+//uci show firewall | grep redirect
