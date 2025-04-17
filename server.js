@@ -9,9 +9,12 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// Rotalar
+// 🔌 Rotalar
 const portBlockingRoutes = require('./routes/portBlocking');
+const portForwardingRoutes = require('./routes/portForwarding'); // ✅ Yeni eklenen yönlendirme rotası
+
 app.use('/api/portblocking/rules', portBlockingRoutes);
+app.use('/api/portforwarding/rules', portForwardingRoutes); // ✅ Kullanıma alındı
 
 // Test endpoint'i
 app.get('/status', (req, res) => {
