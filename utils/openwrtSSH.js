@@ -13,7 +13,7 @@ function sendToOpenWRT(commands) {
             conn.end();
           })
           .on('data', (data) => {
-            console.log('📥 Çıktı:', data.toString());
+            console.log('📥 Kural ID:', data.toString());
           });
       });
     })
