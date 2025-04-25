@@ -21,25 +21,31 @@ function buildPortBlockingCommands({ portRange, protocol }) {
 }
 
 function buildPortForwardingCommands({ sourceIP, destinationIP, sourcePort, destinationPort, protocol }) {
-  const ruleName = `forward_${protocol}_${sourcePort || 'any'}_${destinationPort}_${Date.now()}`;
+  const timestamp = Date.now();
+  const interfaces = ['wan', 'lan'];
+  const commands = [];
 
-  const commands = [
-    `uci add firewall redirect`,
-    `uci set firewall.@redirect[-1].name='${ruleName}'`,
-    `uci set firewall.@redirect[-1].src='wan'`,
-    `uci set firewall.@redirect[-1].dest='lan'`,
-    `uci set firewall.@redirect[-1].proto='${protocol.toLowerCase()}'`,
-    `uci set firewall.@redirect[-1].dest_ip='${destinationIP}'`,
-    `uci set firewall.@redirect[-1].dest_port='${destinationPort}'`,
-    `uci set firewall.@redirect[-1].target='DNAT'`,
-  ];
+  for (const iface of interfaces) {
+    const ruleName = `forward_${iface}_${protocol}_${sourcePort || 'any'}_${destinationPort}_${timestamp}`;
+    
+    commands.push(
+      `uci add firewall redirect`,
+      `uci set firewall.@redirect[-1].name='${ruleName}'`,
+      `uci set firewall.@redirect[-1].src='${iface}'`,
+      `uci set firewall.@redirect[-1].dest='lan'`,
+      `uci set firewall.@redirect[-1].proto='${protocol.toLowerCase()}'`,
+      `uci set firewall.@redirect[-1].dest_ip='${destinationIP}'`,
+      `uci set firewall.@redirect[-1].dest_port='${destinationPort}'`,
+      `uci set firewall.@redirect[-1].target='DNAT'`
+    );
 
-  if (sourceIP) {
-    commands.push(`uci set firewall.@redirect[-1].src_ip='${sourceIP}'`);
-  }
+    if (sourceIP) {
+      commands.push(`uci set firewall.@redirect[-1].src_ip='${sourceIP}'`);
+    }
 
-  if (sourcePort) {
-    commands.push(`uci set firewall.@redirect[-1].src_dport='${sourcePort}'`);
+    if (sourcePort) {
+      commands.push(`uci set firewall.@redirect[-1].src_dport='${sourcePort}'`);
+    }
   }
 
   commands.push(`uci commit firewall`);
