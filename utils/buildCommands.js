@@ -1,5 +1,6 @@
+// 🔥 PORT ENGELLEME KOMUTLARI
 function buildPortBlockingCommands({ portRange, protocol }) {
-  const zones = ['wan', 'lan']; // Her iki zone için
+  const zones = ['wan', 'lan']; // Hem WAN hem LAN için kurallar oluşturulacak
   const commands = [];
 
   zones.forEach((zone) => {
@@ -20,6 +21,7 @@ function buildPortBlockingCommands({ portRange, protocol }) {
   return commands;
 }
 
+// 🔥 PORT YÖNLENDİRME KOMUTLARI
 function buildPortForwardingCommands({ sourceIP, destinationIP, sourcePort, destinationPort, protocol }) {
   const timestamp = Date.now();
   const interfaces = ['wan', 'lan'];
@@ -54,7 +56,36 @@ function buildPortForwardingCommands({ sourceIP, destinationIP, sourcePort, dest
   return commands;
 }
 
+// 🔥 MAC ADRESİ KURALLARI KOMUTLARI
+function buildMACRulesCommands({ macAddress, action, startTime, endTime }) {
+  const ruleName = `mac_${action}_${macAddress.replace(/:/g, '')}_${Date.now()}`;
+  const commands = [];
+
+  commands.push(
+    `uci add firewall rule`,
+    `uci set firewall.@rule[-1].name='${ruleName}'`,
+    `uci set firewall.@rule[-1].src='lan'`,
+    `uci set firewall.@rule[-1].src_mac='${macAddress}'`,
+    `uci set firewall.@rule[-1].target='${action === 'allow' ? 'ACCEPT' : 'REJECT'}'`
+  );
+
+  // Eğer başlangıç ve bitiş saati girilmişse zaman kısıtlaması ekle
+  if (startTime && endTime) {
+    commands.push(
+      `uci set firewall.@rule[-1].start_time='${startTime}'`,
+      `uci set firewall.@rule[-1].stop_time='${endTime}'`
+    );
+  }
+
+  commands.push(`uci commit firewall`);
+  commands.push(`/etc/init.d/firewall restart`);
+
+  return commands;
+}
+
+// 🌟 EXPORTLAR
 module.exports = {
   buildPortBlockingCommands,
   buildPortForwardingCommands,
+  buildMACRulesCommands,
 };

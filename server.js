@@ -9,19 +9,21 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// 🔌 Rotalar
+// Rotalar
 const portBlockingRoutes = require('./routes/portBlocking');
-const portForwardingRoutes = require('./routes/portForwarding'); // ✅ Yeni eklenen yönlendirme rotası
+const portForwardingRoutes = require('./routes/portForwarding');
+const macRulesRoutes = require('./routes/macRules'); // MAC Routes doğru geldi
 
 app.use('/api/portblocking/rules', portBlockingRoutes);
-app.use('/api/portforwarding/rules', portForwardingRoutes); // ✅ Kullanıma alındı
+app.use('/api/portforwarding/rules', portForwardingRoutes);
+app.use('/api/macrouting/rules', macRulesRoutes); // 🔥 düzeltildi
 
-// Test endpoint'i
+// Test endpoint
 app.get('/status', (req, res) => {
   res.json({ message: 'API çalışıyor!', timestamp: new Date() });
 });
 
-// Sunucuyu başlat
+// Server başlat
 app.listen(PORT, () => {
   console.log(`API aktif: http://localhost:${PORT}`);
 });
