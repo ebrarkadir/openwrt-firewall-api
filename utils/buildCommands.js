@@ -58,24 +58,27 @@ function buildPortForwardingCommands({ sourceIP, destinationIP, sourcePort, dest
 
 // 🔥 MAC ADRESİ KURALLARI KOMUTLARI
 function buildMACRulesCommands({ macAddress, action, startTime, endTime }) {
-  const ruleName = `mac_${action}_${macAddress.replace(/:/g, '')}_${Date.now()}`;
+  const timestamp = Date.now();
+  const zones = ['lan', 'wan']; // Hem LAN hem WAN için kurallar
   const commands = [];
 
-  commands.push(
-    `uci add firewall rule`,
-    `uci set firewall.@rule[-1].name='${ruleName}'`,
-    `uci set firewall.@rule[-1].src='lan'`,
-    `uci set firewall.@rule[-1].src_mac='${macAddress}'`,
-    `uci set firewall.@rule[-1].target='${action === 'allow' ? 'ACCEPT' : 'REJECT'}'`
-  );
-
-  // Eğer başlangıç ve bitiş saati girilmişse zaman kısıtlaması ekle
-  if (startTime && endTime) {
+  zones.forEach((zone) => {
+    const ruleName = `mac_${action}_${zone}_${macAddress.replace(/:/g, '')}_${timestamp}`;
     commands.push(
-      `uci set firewall.@rule[-1].start_time='${startTime}'`,
-      `uci set firewall.@rule[-1].stop_time='${endTime}'`
+      `uci add firewall rule`,
+      `uci set firewall.@rule[-1].name='${ruleName}'`,
+      `uci set firewall.@rule[-1].src='${zone}'`,
+      `uci set firewall.@rule[-1].src_mac='${macAddress}'`,
+      `uci set firewall.@rule[-1].target='${action === 'allow' ? 'ACCEPT' : 'REJECT'}'`
     );
-  }
+
+    if (startTime && endTime) {
+      commands.push(
+        `uci set firewall.@rule[-1].start_time='${startTime}'`,
+        `uci set firewall.@rule[-1].stop_time='${endTime}'`
+      );
+    }
+  });
 
   commands.push(`uci commit firewall`);
   commands.push(`/etc/init.d/firewall restart`);
