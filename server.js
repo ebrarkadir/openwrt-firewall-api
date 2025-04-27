@@ -13,12 +13,14 @@ app.use(express.json());
 const portBlockingRoutes = require('./routes/portBlocking');
 const portForwardingRoutes = require('./routes/portForwarding');
 const macRulesRoutes = require('./routes/macRules'); // MAC Routes doğru geldi
+const firewallRoutes = require('./routes/firewall'); // Firewall Routes doğru geldi
 
 app.use('/api/portblocking/rules', portBlockingRoutes);
 app.use('/api/portforwarding/rules', portForwardingRoutes);
-app.use('/api/macrouting/rules', macRulesRoutes); // 🔥 düzeltildi
+app.use('/api/macrouting/rules', macRulesRoutes)
+app.use('/api/firewall/rules', firewallRoutes); 
 
-// Test endpoint
+
 app.get('/status', (req, res) => {
   res.json({ message: 'API çalışıyor!', timestamp: new Date() });
 });

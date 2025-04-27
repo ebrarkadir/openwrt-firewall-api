@@ -86,9 +86,35 @@ function buildMACRulesCommands({ macAddress, action, startTime, endTime }) {
   return commands;
 }
 
+// 🔥 TRAFİK YÖNETİMİ KOMUTLARI
+function buildFirewallRulesCommands({ sourceIP, destinationIP, protocol, portRange, action }) {
+  const zones = ['lan', 'wan']; // Hem LAN hem WAN için
+  const commands = [];
+
+  zones.forEach((zone) => {
+    const ruleName = `traffic_${action}_${zone}_${sourceIP.replace(/\./g, '-')}_${destinationIP.replace(/\./g, '-')}_${Date.now()}`;
+    commands.push(
+      `uci add firewall rule`,
+      `uci set firewall.@rule[-1].name='${ruleName}'`,
+      `uci set firewall.@rule[-1].src='${zone}'`,
+      `uci set firewall.@rule[-1].proto='${protocol.toLowerCase()}'`,
+      `uci set firewall.@rule[-1].src_ip='${sourceIP}'`,
+      `uci set firewall.@rule[-1].dest_ip='${destinationIP}'`,
+      `uci set firewall.@rule[-1].dest_port='${portRange}'`,
+      `uci set firewall.@rule[-1].target='${action === 'allow' ? 'ACCEPT' : 'REJECT'}'`
+    );
+  });
+
+  commands.push(`uci commit firewall`);
+  commands.push(`/etc/init.d/firewall restart`);
+
+  return commands;
+}
+
 // 🌟 EXPORTLAR
 module.exports = {
   buildPortBlockingCommands,
   buildPortForwardingCommands,
   buildMACRulesCommands,
+  buildFirewallRulesCommands
 };
