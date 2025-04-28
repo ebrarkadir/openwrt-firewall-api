@@ -111,10 +111,38 @@ function buildFirewallRulesCommands({ sourceIP, destinationIP, protocol, portRan
   return commands;
 }
 
-// 🌟 EXPORTLAR
+// 🔥 ZAMAN BAZLI PORT KURALLARI KOMUTLARI
+function buildTimeBasedRulesCommands({ startTime, endTime, protocol, portRange, action }) {
+  const zones = ['lan', 'wan']; // LAN ve WAN için
+  const commands = [];
+  const timestamp = Date.now();
+
+  zones.forEach((zone) => {
+    const ruleName = `time_${action}_${zone}_${portRange.replace('-', '_')}_${timestamp}`;
+    
+    commands.push(
+      `uci add firewall rule`,
+      `uci set firewall.@rule[-1].name='${ruleName}'`,
+      `uci set firewall.@rule[-1].src='${zone}'`,
+      `uci set firewall.@rule[-1].proto='${protocol.toLowerCase()}'`,
+      `uci set firewall.@rule[-1].dest_port='${portRange}'`,
+      `uci set firewall.@rule[-1].target='${action === 'allow' ? 'ACCEPT' : 'REJECT'}'`,
+      `uci set firewall.@rule[-1].start_time='${startTime}'`,
+      `uci set firewall.@rule[-1].stop_time='${endTime}'`
+    );
+  });
+
+  commands.push(`uci commit firewall`);
+  commands.push(`/etc/init.d/firewall restart`);
+
+  return commands;
+}
+
+// 🌟 EXPORT'a ekle
 module.exports = {
   buildPortBlockingCommands,
   buildPortForwardingCommands,
   buildMACRulesCommands,
-  buildFirewallRulesCommands
+  buildFirewallRulesCommands,
+  buildTimeBasedRulesCommands // 🔥 Bunu da export etmeyi unutma!
 };
