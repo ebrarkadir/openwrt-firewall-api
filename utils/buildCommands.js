@@ -1,6 +1,8 @@
+// buildCommands.js
+
 // 🔥 PORT ENGELLEME KOMUTLARI
 function buildPortBlockingCommands({ portRange, protocol }) {
-  const zones = ['wan', 'lan']; // Hem WAN hem LAN için kurallar oluşturulacak
+  const zones = ['wan', 'lan'];
   const commands = [];
 
   zones.forEach((zone) => {
@@ -59,7 +61,7 @@ function buildPortForwardingCommands({ sourceIP, destinationIP, sourcePort, dest
 // 🔥 MAC ADRESİ KURALLARI KOMUTLARI
 function buildMACRulesCommands({ macAddress, action, startTime, endTime }) {
   const timestamp = Date.now();
-  const zones = ['lan', 'wan']; // Hem LAN hem WAN için kurallar
+  const zones = ['lan', 'wan'];
   const commands = [];
 
   zones.forEach((zone) => {
@@ -88,7 +90,7 @@ function buildMACRulesCommands({ macAddress, action, startTime, endTime }) {
 
 // 🔥 TRAFİK YÖNETİMİ KOMUTLARI
 function buildFirewallRulesCommands({ sourceIP, destinationIP, protocol, portRange, action }) {
-  const zones = ['lan', 'wan']; // Hem LAN hem WAN için
+  const zones = ['lan', 'wan'];
   const commands = [];
 
   zones.forEach((zone) => {
@@ -113,13 +115,13 @@ function buildFirewallRulesCommands({ sourceIP, destinationIP, protocol, portRan
 
 // 🔥 ZAMAN BAZLI PORT KURALLARI KOMUTLARI
 function buildTimeBasedRulesCommands({ startTime, endTime, protocol, portRange, action }) {
-  const zones = ['lan', 'wan']; // LAN ve WAN için
+  const zones = ['lan', 'wan'];
   const commands = [];
   const timestamp = Date.now();
 
   zones.forEach((zone) => {
     const ruleName = `time_${action}_${zone}_${portRange.replace('-', '_')}_${timestamp}`;
-    
+
     commands.push(
       `uci add firewall rule`,
       `uci set firewall.@rule[-1].name='${ruleName}'`,
@@ -138,11 +140,11 @@ function buildTimeBasedRulesCommands({ startTime, endTime, protocol, portRange, 
   return commands;
 }
 
-// 🌟 EXPORT'a ekle
+// 🌟 EXPORT
 module.exports = {
   buildPortBlockingCommands,
   buildPortForwardingCommands,
   buildMACRulesCommands,
   buildFirewallRulesCommands,
-  buildTimeBasedRulesCommands // 🔥 Bunu da export etmeyi unutma!
+  buildTimeBasedRulesCommands
 };

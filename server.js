@@ -18,9 +18,10 @@ const timeBasedRulesRoutes = require('./routes/timeBasedRules');
 
 app.use('/api/portblocking/rules', portBlockingRoutes);
 app.use('/api/portforwarding/rules', portForwardingRoutes);
-app.use('/api/macrouting/rules', macRulesRoutes)
-app.use('/api/firewall/rules', firewallRoutes); 
-app.use('/api/timebased/rules', timeBasedRulesRoutes);
+app.use('/api/macrouting/rules', macRulesRoutes);
+app.use('/api/firewall/rules', firewallRoutes);
+app.use('/api/timebased/rules', timeBasedRulesRoutes); // 🔥 BURAYA EKLEDİK
+
 
 app.get('/status', (req, res) => {
   res.json({ message: 'API çalışıyor!', timestamp: new Date() });
