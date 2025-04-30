@@ -1,5 +1,3 @@
-// buildCommands.js
-
 // 🔥 PORT ENGELLEME KOMUTLARI
 function buildPortBlockingCommands({ portRange, protocol }) {
   const zones = ['wan', 'lan'];
@@ -31,7 +29,7 @@ function buildPortForwardingCommands({ sourceIP, destinationIP, sourcePort, dest
 
   for (const iface of interfaces) {
     const ruleName = `forward_${iface}_${protocol}_${sourcePort || 'any'}_${destinationPort}_${timestamp}`;
-    
+
     commands.push(
       `uci add firewall redirect`,
       `uci set firewall.@redirect[-1].name='${ruleName}'`,
@@ -88,17 +86,18 @@ function buildMACRulesCommands({ macAddress, action, startTime, endTime }) {
   return commands;
 }
 
-// 🔥 TRAFİK YÖNETİMİ KOMUTLARI
 function buildFirewallRulesCommands({ sourceIP, destinationIP, protocol, portRange, action }) {
-  const zones = ['lan', 'wan'];
+  const timestamp = Date.now();
   const commands = [];
+  const destZones = ['wan', 'lan'];
 
-  zones.forEach((zone) => {
-    const ruleName = `traffic_${action}_${zone}_${sourceIP.replace(/\./g, '-')}_${destinationIP.replace(/\./g, '-')}_${Date.now()}`;
+  destZones.forEach((zone) => {
+    const ruleName = `traffic_${action}_${zone}_${sourceIP.replace(/\./g, '-')}_${destinationIP.replace(/\./g, '-')}_${timestamp}`;
     commands.push(
       `uci add firewall rule`,
       `uci set firewall.@rule[-1].name='${ruleName}'`,
-      `uci set firewall.@rule[-1].src='${zone}'`,
+      `uci set firewall.@rule[-1].src='lan'`,
+      `uci set firewall.@rule[-1].dest='${zone}'`,
       `uci set firewall.@rule[-1].proto='${protocol.toLowerCase()}'`,
       `uci set firewall.@rule[-1].src_ip='${sourceIP}'`,
       `uci set firewall.@rule[-1].dest_ip='${destinationIP}'`,
