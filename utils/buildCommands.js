@@ -112,7 +112,6 @@ function buildFirewallRulesCommands({ sourceIP, destinationIP, protocol, portRan
   return commands;
 }
 
-// 🔥 ZAMAN BAZLI PORT KURALLARI KOMUTLARI
 function buildTimeBasedRulesCommands({ startTime, endTime, protocol, portRange, action }) {
   const zones = ['lan', 'wan'];
   const commands = [];
@@ -125,6 +124,7 @@ function buildTimeBasedRulesCommands({ startTime, endTime, protocol, portRange, 
       `uci add firewall rule`,
       `uci set firewall.@rule[-1].name='${ruleName}'`,
       `uci set firewall.@rule[-1].src='${zone}'`,
+      `uci set firewall.@rule[-1].dest='wan'`,
       `uci set firewall.@rule[-1].proto='${protocol.toLowerCase()}'`,
       `uci set firewall.@rule[-1].dest_port='${portRange}'`,
       `uci set firewall.@rule[-1].target='${action === 'allow' ? 'ACCEPT' : 'REJECT'}'`,
@@ -138,7 +138,6 @@ function buildTimeBasedRulesCommands({ startTime, endTime, protocol, portRange, 
 
   return commands;
 }
-
 // 🌟 EXPORT
 module.exports = {
   buildPortBlockingCommands,
