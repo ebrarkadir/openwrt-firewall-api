@@ -1,3 +1,5 @@
+const dns = require('dns').promises;
+
 // 🔥 PORT ENGELLEME KOMUTLARI
 function buildPortBlockingCommands({ portRange, protocol }) {
   const zones = ['wan', 'lan'];
@@ -86,6 +88,7 @@ function buildMACRulesCommands({ macAddress, action, startTime, endTime }) {
   return commands;
 }
 
+// 🔥 TRAFİK YÖNETİMİ KOMUTLARI
 function buildFirewallRulesCommands({ sourceIP, destinationIP, protocol, portRange, action }) {
   const timestamp = Date.now();
   const commands = [];
@@ -112,6 +115,7 @@ function buildFirewallRulesCommands({ sourceIP, destinationIP, protocol, portRan
   return commands;
 }
 
+// 🔥 ZAMAN BAZLI PORT KURALLARI KOMUTLARI
 function buildTimeBasedRulesCommands({ startTime, endTime, protocol, portRange, action }) {
   const zones = ['lan', 'wan'];
   const commands = [];
@@ -138,11 +142,52 @@ function buildTimeBasedRulesCommands({ startTime, endTime, protocol, portRange, 
 
   return commands;
 }
+
+// 🔥 DNS/URL ENGELLEME KOMUTLARI
+async function buildDNSBlockingCommands({ domainOrURL }) {
+  const timestamp = Date.now();
+  const commands = [];
+
+  let domain = domainOrURL.trim();
+  domain = domain.replace(/^https?:\/\//, '').split('/')[0];
+
+  try {
+    const resolvedIPs = await dns.resolve(domain);
+
+    resolvedIPs.forEach((ip, i) => {
+      ['icmp', 'tcp'].forEach((protocol) => {
+        const ruleName = `dnsblock_${domain.replace(/\./g, '_')}_${protocol}_${i}_${timestamp}`;
+        const destPort = protocol === 'tcp' ? "443" : undefined;
+
+        commands.push(`uci add firewall rule`);
+        commands.push(`uci set firewall.@rule[-1].name='${ruleName}'`);
+        commands.push(`uci set firewall.@rule[-1].src='lan'`);
+        commands.push(`uci set firewall.@rule[-1].dest_ip='${ip}'`);
+        commands.push(`uci set firewall.@rule[-1].proto='${protocol}'`);
+        if (destPort) {
+          commands.push(`uci set firewall.@rule[-1].dest_port='${destPort}'`);
+        }
+        commands.push(`uci set firewall.@rule[-1].target='REJECT'`);
+      });
+    });
+
+    if (commands.length > 0) {
+      commands.push(`uci commit firewall`);
+      commands.push(`/etc/init.d/firewall restart`);
+    }
+  } catch (error) {
+    console.error(`❌ DNS çözümleme hatası (${domain}):`, error.message);
+  }
+
+  return commands;
+}
+
 // 🌟 EXPORT
 module.exports = {
   buildPortBlockingCommands,
   buildPortForwardingCommands,
   buildMACRulesCommands,
   buildFirewallRulesCommands,
-  buildTimeBasedRulesCommands
+  buildTimeBasedRulesCommands,
+  buildDNSBlockingCommands
 };
