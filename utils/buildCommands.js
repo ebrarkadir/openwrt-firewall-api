@@ -182,6 +182,37 @@ async function buildDNSBlockingCommands({ domainOrURL }) {
   return commands;
 }
 
+function buildQoSCommands(rules) {
+  const commands = [];
+
+  // Mevcut qdisc silinsin (hata almamak için || true)
+  commands.push("tc qdisc del dev br-lan root || true");
+
+  // Root qdisc ekle
+  commands.push("tc qdisc add dev br-lan root handle 1: htb default 30");
+  commands.push("tc class add dev br-lan parent 1: classid 1:1 htb rate 85000kbit");
+
+  // Her kural için sınıf ve iptables mark ekle
+  rules.forEach((rule, index) => {
+    const classId = `1:${index + 10}`;
+    const mac = rule.macAddress.toLowerCase();
+    const bw = rule.bandwidthLimit || "4096"; // varsayılan 4Mbit
+    const mark = index + 10;
+
+    // class
+    commands.push(`tc class add dev br-lan parent 1:1 classid ${classId} htb rate ${bw}kbit`);
+
+    // iptables - mangle ile işaretleme
+    commands.push(`iptables -t mangle -A PREROUTING -m mac --mac-source ${mac} -j MARK --set-mark ${mark}`);
+
+    // class'ı mark ile eşle
+    commands.push(`tc filter add dev br-lan protocol ip parent 1:0 prio 1 handle ${mark} fw flowid ${classId}`);
+  });
+
+  return commands;
+}
+
+
 // 🌟 EXPORT
 module.exports = {
   buildPortBlockingCommands,
@@ -189,5 +220,6 @@ module.exports = {
   buildMACRulesCommands,
   buildFirewallRulesCommands,
   buildTimeBasedRulesCommands,
-  buildDNSBlockingCommands
+  buildDNSBlockingCommands,
+  buildQoSCommands
 };
