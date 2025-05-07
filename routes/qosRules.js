@@ -1,12 +1,12 @@
 const express = require("express");
 const router = express.Router();
-const sendToOpenWRT = require("../utils/openwrtSSH"); // ❗ doğru: default export
-const { buildQoSCommands } = require("../utils/buildCommands"); // doğru şekilde index.js'ten çekiyoruz
+const sendToOpenWRT = require("../utils/openwrtSSH");
+const { buildQoSCommands } = require("../utils/buildCommands");
 
 router.post("/", async (req, res) => {
   try {
     const rules = req.body.rules || [];
-    const commands = buildQoSCommands(rules);
+    const commands = buildQoSCommands(rules); // Tüm mantık burada olacak
     sendToOpenWRT(commands);
     res.json({ message: "QoS kuralları gönderildi.", commands });
   } catch (err) {
