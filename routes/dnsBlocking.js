@@ -6,8 +6,8 @@ const { buildDNSBlockingCommands } = require('../utils/buildCommands');
 router.post('/', async (req, res) => {
   const { rules } = req.body;
 
-  if (!Array.isArray(rules) || rules.length === 0) {
-    return res.status(400).json({ error: 'Geçerli bir kural listesi gönderilmedi.' });
+  if (!Array.isArray(rules)) {
+    return res.status(400).json({ error: "Kurallar geçerli formatta değil." });
   }
 
   try {
@@ -18,15 +18,11 @@ router.post('/', async (req, res) => {
       allCommands.push(...commands);
     }
 
-    if (allCommands.length === 0) {
-      return res.status(400).json({ error: 'Hiçbir IP çözümlenemedi, komut oluşturulamadı.' });
-    }
-
     sendToOpenWRT(allCommands);
-    res.json({ message: 'DNS/URL engelleme kuralları başarıyla gönderildi.' });
+    res.json({ message: "Kurallar başarıyla gönderildi." });
   } catch (error) {
-    console.error('❌ DNS Blocking Error:', error);
-    res.status(500).json({ error: 'Kural gönderimi sırasında hata oluştu.' });
+    console.error("❌ DNS Blocking Route Hatası:", error);
+    res.status(500).json({ error: "Sunucu hatası" });
   }
 });
 

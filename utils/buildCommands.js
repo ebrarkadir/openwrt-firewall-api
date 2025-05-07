@@ -143,41 +143,17 @@ function buildTimeBasedRulesCommands({ startTime, endTime, protocol, portRange, 
   return commands;
 }
 
-// 🔥 DNS/URL ENGELLEME KOMUTLARI
 async function buildDNSBlockingCommands({ domainOrURL }) {
-  const timestamp = Date.now();
+  const sanitizedDomain = domainOrURL.trim()
+    .replace(/^https?:\/\//, '')
+    .split('/')[0];
+
   const commands = [];
 
-  let domain = domainOrURL.trim();
-  domain = domain.replace(/^https?:\/\//, '').split('/')[0];
-
-  try {
-    const resolvedIPs = await dns.resolve(domain);
-
-    resolvedIPs.forEach((ip, i) => {
-      ['icmp', 'tcp'].forEach((protocol) => {
-        const ruleName = `dnsblock_${domain.replace(/\./g, '_')}_${protocol}_${i}_${timestamp}`;
-        const destPort = protocol === 'tcp' ? "443" : undefined;
-
-        commands.push(`uci add firewall rule`);
-        commands.push(`uci set firewall.@rule[-1].name='${ruleName}'`);
-        commands.push(`uci set firewall.@rule[-1].src='lan'`);
-        commands.push(`uci set firewall.@rule[-1].dest_ip='${ip}'`);
-        commands.push(`uci set firewall.@rule[-1].proto='${protocol}'`);
-        if (destPort) {
-          commands.push(`uci set firewall.@rule[-1].dest_port='${destPort}'`);
-        }
-        commands.push(`uci set firewall.@rule[-1].target='REJECT'`);
-      });
-    });
-
-    if (commands.length > 0) {
-      commands.push(`uci commit firewall`);
-      commands.push(`/etc/init.d/firewall restart`);
-    }
-  } catch (error) {
-    console.error(`❌ DNS çözümleme hatası (${domain}):`, error.message);
-  }
+  commands.push(`mkdir -p /etc/dnsmasq.d`);
+  commands.push(`echo "address=/${sanitizedDomain}/0.0.0.0" >> /etc/dnsmasq.d/blacklist.conf`);
+  commands.push(`echo "address=/${sanitizedDomain}/::" >> /etc/dnsmasq.d/blacklist.conf`);
+  commands.push(`/etc/init.d/dnsmasq restart`);
 
   return commands;
 }
@@ -205,7 +181,51 @@ function buildQoSCommands(rules) {
 
   return commands;
 }
+function buildVPNRulesCommands(rules) {
+  const commands = [];
+  const timestamp = Date.now();
 
+  rules.forEach((rule, index) => {
+    const ruleName = `${rule.ruleType}_${rule.protocol.toLowerCase()}_${rule.sourceIP.replace(/\./g, '_')}_${rule.destinationIP.replace(/\./g, '_')}_${timestamp}_${index}`;
+
+    if (rule.ruleType === "vpn") {
+      // VPN için sadece belirli IP ve portlara REJECT örneği
+      commands.push(`uci add firewall rule`);
+      commands.push(`uci set firewall.@rule[-1].name='${ruleName}'`);
+      commands.push(`uci set firewall.@rule[-1].src='lan'`);
+      commands.push(`uci set firewall.@rule[-1].dest='wan'`);
+      commands.push(`uci set firewall.@rule[-1].proto='${rule.protocol.toLowerCase()}'`);
+      commands.push(`uci set firewall.@rule[-1].src_ip='${rule.sourceIP}'`);
+      commands.push(`uci set firewall.@rule[-1].dest_ip='${rule.destinationIP}'`);
+      if (rule.portRange) {
+        commands.push(`uci set firewall.@rule[-1].dest_port='${rule.portRange}'`);
+      }
+      commands.push(`uci set firewall.@rule[-1].target='REJECT'`);
+    }
+
+    if (rule.ruleType === "nat") {
+      // NAT için port yönlendirme örneği
+      commands.push(`uci add firewall redirect`);
+      commands.push(`uci set firewall.@redirect[-1].name='${ruleName}'`);
+      commands.push(`uci set firewall.@redirect[-1].src='wan'`);
+      commands.push(`uci set firewall.@redirect[-1].dest='lan'`);
+      commands.push(`uci set firewall.@redirect[-1].proto='${rule.protocol.toLowerCase()}'`);
+      commands.push(`uci set firewall.@redirect[-1].src_ip='${rule.sourceIP}'`);
+      commands.push(`uci set firewall.@redirect[-1].dest_ip='${rule.destinationIP}'`);
+      if (rule.portRange) {
+        const [fromPort, toPort] = rule.portRange.split("-");
+        commands.push(`uci set firewall.@redirect[-1].src_dport='${fromPort}'`);
+        commands.push(`uci set firewall.@redirect[-1].dest_port='${toPort || fromPort}'`);
+      }
+      commands.push(`uci set firewall.@redirect[-1].target='DNAT'`);
+    }
+  });
+
+  commands.push("uci commit firewall");
+  commands.push("/etc/init.d/firewall restart");
+
+  return commands;
+}
 
 
 
@@ -217,5 +237,6 @@ module.exports = {
   buildFirewallRulesCommands,
   buildTimeBasedRulesCommands,
   buildDNSBlockingCommands,
-  buildQoSCommands
+  buildQoSCommands,
+  buildVPNRulesCommands
 };
