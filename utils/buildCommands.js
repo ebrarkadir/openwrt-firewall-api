@@ -114,6 +114,15 @@ function buildFirewallRulesCommands({ sourceIP, destinationIP, protocol, portRan
 
   return commands;
 }
+function buildFirewallDeleteCommand(uciKey) {
+  const commands = [];
+
+  commands.push(`uci delete firewall.${uciKey}`);
+  commands.push(`uci commit firewall`);
+  commands.push(`/etc/init.d/firewall restart`);
+
+  return commands;
+}
 
 // 🔥 ZAMAN BAZLI PORT KURALLARI KOMUTLARI
 function buildTimeBasedRulesCommands({ startTime, endTime, protocol, portRange, action }) {
@@ -238,5 +247,6 @@ module.exports = {
   buildTimeBasedRulesCommands,
   buildDNSBlockingCommands,
   buildQoSCommands,
-  buildVPNRulesCommands
+  buildVPNRulesCommands,
+  buildFirewallDeleteCommand
 };
