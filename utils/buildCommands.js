@@ -26,6 +26,16 @@ function buildPortBlockingCommands({ portRange, protocol }) {
   return commands;
 }
 
+function buildPortBlockingDeleteCommand(uciKey) {
+  const commands = [];
+
+  commands.push(`uci delete firewall.${uciKey}`);
+  commands.push(`uci commit firewall`);
+  commands.push(`/etc/init.d/firewall restart`);
+
+  return commands;
+}
+
 // 🔥 PORT YÖNLENDİRME KOMUTLARI
 function buildPortForwardingCommands({
   sourceIP,
@@ -319,4 +329,5 @@ module.exports = {
   buildVPNRulesCommands,
   buildFirewallDeleteCommand,
   buildPortForwardingDeleteCommand,
+  buildPortBlockingDeleteCommand
 };
