@@ -28,11 +28,14 @@ router.post('/', async (req, res) => {
 
 // 🔍 GET: Trafik kurallarını listeleme
 router.get('/', async (req, res) => {
+  console.log("get isteği geldi!")
+  
   fetchFirewallRules((err, data) => {
     if (err) {
       console.error("Firewall kuralları alınamadı:", err.message);
       return res.status(500).json({ error: "Firewall kuralları alınamadı." });
     }
+    console.log("Firewall kuralları alındı:", data);
 
     const allLines = data.split('\n');
     const ruleMap = {};
@@ -49,6 +52,9 @@ router.get('/', async (req, res) => {
     }
 
     const trafficRules = Object.values(ruleMap).filter(rule => rule.name?.startsWith('traffic_'));
+
+    console.log("Trafik kuralları:", trafficRules);
+    
     res.json(trafficRules);
   });
 });

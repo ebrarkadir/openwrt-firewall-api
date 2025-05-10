@@ -12,6 +12,7 @@ function fetchFirewallRules(callback) {
 
         stream
           .on("close", () => {
+            console.log("toplanan veri:", output);
             conn.end();
             callback(null, output); // işlemi dışarıya aktar
           })
