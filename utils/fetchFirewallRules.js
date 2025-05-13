@@ -23,6 +23,7 @@ function fetchFirewallRules(callback) {
             console.error("❌ Hata (stderr):", data.toString());
           });
       });
+
     })
     .on("error", (err) => {
       console.error("❌ SSH bağlantı hatası (fetch):", err.message);
