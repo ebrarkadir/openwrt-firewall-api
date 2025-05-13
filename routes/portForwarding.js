@@ -1,9 +1,15 @@
 const express = require("express");
 const router = express.Router();
 
-const { buildPortForwardingCommands } = require("../utils/buildCommands");
-const sendToOpenWRT = require("../utils/openwrtSSH");
+const {
+  buildPortForwardingCommands,
+  buildPortForwardingDeleteCommand,
+} = require("../utils/buildCommands");
 
+const sendToOpenWRT = require("../utils/openwrtSSH");
+const fetchFirewallRules = require("../utils/fetchFirewallRules");
+
+// 🔥 KURAL EKLE (POST)
 router.post("/", async (req, res) => {
   try {
     const { rules } = req.body;
@@ -20,19 +26,16 @@ router.post("/", async (req, res) => {
       await sendToOpenWRT(commands);
     }
 
-    res
-      .status(200)
-      .json({
-        message: "Tüm port yönlendirme kuralları başarıyla gönderildi.",
-      });
+    res.status(200).json({
+      message: "Tüm port yönlendirme kuralları başarıyla gönderildi.",
+    });
   } catch (error) {
     console.error("❌ Port yönlendirme kuralı hatası:", error.message);
     res.status(500).json({ error: "Kural eklenirken bir hata oluştu." });
   }
 });
 
-const fetchFirewallRules = require("../utils/fetchFirewallRules");
-
+// 🔍 KURALLARI GETİR (GET)
 router.get("/", async (req, res) => {
   fetchFirewallRules((err, data) => {
     if (err) {
@@ -48,10 +51,11 @@ router.get("/", async (req, res) => {
     for (const line of allLines) {
       const match = line.match(/^firewall\.(.*?)\.(.*?)='(.*?)'$/);
       if (match) {
-        const [_, uciKey, field, value] = match;
-        if (uciKey.startsWith("@redirect[")) {
-          if (!ruleMap[uciKey]) ruleMap[uciKey] = { uciKey };
-          ruleMap[uciKey][field] = value;
+        const [_, rawKey, field, value] = match;
+        if (rawKey.startsWith("@redirect[")) {
+          if (!ruleMap[rawKey]) ruleMap[rawKey] = {};
+          ruleMap[rawKey][field] = value;
+          ruleMap[rawKey]["uciKey"] = rawKey; // ✅ GEREKLİ: silme için lazım
         }
       }
     }
@@ -64,9 +68,8 @@ router.get("/", async (req, res) => {
   });
 });
 
-const { buildPortForwardingDeleteCommand } = require("../utils/buildCommands");
-
-router.delete("/:uciKey", async (req, res) => {
+// ❌ KURAL SİL (DELETE)
+router.delete("/:uciKey(*)", async (req, res) => {
   const { uciKey } = req.params;
 
   if (!uciKey) {
