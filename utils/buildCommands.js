@@ -29,7 +29,11 @@ function buildPortBlockingCommands({ portRange, protocol }) {
 function buildPortBlockingDeleteCommand(uciKey) {
   const commands = [];
 
-  commands.push(`uci delete firewall.${uciKey}`);
+  // @rule[5] → rule5'e çevrilmesi gerekiyor
+  const match = uciKey.match(/@rule\[(\d+)\]/);
+  const formattedKey = match ? `rule${match[1]}` : uciKey;
+
+  commands.push(`uci delete firewall.${formattedKey}`);
   commands.push(`uci commit firewall`);
   commands.push(`/etc/init.d/firewall restart`);
 
@@ -207,6 +211,14 @@ function buildTimeBasedRulesCommands({
   return commands;
 }
 
+function buildTimeBasedDeleteCommand(uciKey) {
+  return [
+    `uci delete firewall.${uciKey}`,
+    `uci commit firewall`,
+    `/etc/init.d/firewall restart`,
+  ];
+}
+
 async function buildDNSBlockingCommands({ domainOrURL }) {
   const sanitizedDomain = domainOrURL
     .trim()
@@ -329,5 +341,6 @@ module.exports = {
   buildVPNRulesCommands,
   buildFirewallDeleteCommand,
   buildPortForwardingDeleteCommand,
-  buildPortBlockingDeleteCommand
+  buildPortBlockingDeleteCommand,
+  buildTimeBasedDeleteCommand
 };
