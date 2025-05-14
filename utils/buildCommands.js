@@ -105,6 +105,15 @@ function buildMACRulesCommands({ macAddress, action, startTime, endTime }) {
   return commands;
 }
 
+function buildMACRulesDeleteCommand(uciKey) {
+  return [
+    `uci delete firewall.${uciKey}`,
+    `uci commit firewall`,
+    `/etc/init.d/firewall restart`,
+  ];
+}
+
+
 // 🔥 TRAFİK YÖNETİMİ KOMUTLARI
 function buildFirewallRulesCommands({ sourceIP, destinationIP, protocol, portRange, action }) {
   const timestamp = Date.now();
@@ -281,4 +290,5 @@ module.exports = {
   buildDNSBlockingCommands,
   buildQoSCommands,
   buildVPNRulesCommands,
+  buildMACRulesDeleteCommand
 };

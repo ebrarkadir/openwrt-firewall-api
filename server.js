@@ -30,6 +30,7 @@ app.use('/api/qos/rules', qosRulesRoutes);
 app.use('/api/vpn-nat/rules', vpnNatRoutes); // VPN/NAT Routes doğru geldi
 
 
+
 app.get('/status', (req, res) => {
   res.json({ message: 'API çalışıyor!', timestamp: new Date() });
 });
