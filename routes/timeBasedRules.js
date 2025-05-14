@@ -36,13 +36,16 @@ router.get("/", async (req, res) => {
       return res.status(500).json({ error: "Firewall kuralları alınamadı." });
     }
 
+    const allLines = data.split("\n");
+    const ruleMap = {};
+
     for (const line of allLines) {
       const match = line.match(/^firewall\.(.*?)\.(.*?)='(.*?)'$/);
       if (match) {
         const [_, key, field, value] = match;
-        if (key.startsWith('@rule[')) {
+        if (key.startsWith("@rule[")) {
           if (!ruleMap[key]) {
-            ruleMap[key] = { ".name": key }; // 🔥 BURASI
+            ruleMap[key] = { uciKey: key }; // ✔ uciKey dahil
           }
           ruleMap[key][field] = value;
         }
@@ -58,7 +61,7 @@ router.get("/", async (req, res) => {
 });
 
 // ❌ DELETE: Zaman Bazlı Kural Sil
-router.delete("/:uciKey", async (req, res) => {
+router.delete("/:uciKey(*)", async (req, res) => {
   const { uciKey } = req.params;
 
   if (!uciKey) {
@@ -68,7 +71,7 @@ router.delete("/:uciKey", async (req, res) => {
   try {
     const commands = buildTimeBasedDeleteCommand(uciKey);
     await sendToOpenWRT(commands);
-    res.json({ message: "Zaman bazlı kural silindi." });
+    res.json({ message: "Zaman bazlı kural silindi.", success: true });
   } catch (error) {
     console.error("Silme hatası:", error);
     res.status(500).json({ error: "Kural silinemedi." });

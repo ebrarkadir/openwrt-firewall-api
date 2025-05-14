@@ -168,13 +168,15 @@ function buildTimeBasedRulesCommands({ startTime, endTime, protocol, portRange, 
 }
 
 function buildTimeBasedDeleteCommand(uciKey) {
+  // Eğer zaten @rule[3] formatındaysa dokunma
+  const formattedKey = uciKey.startsWith("@rule[") ? uciKey : `@rule[${uciKey}]`;
+
   return [
-    `uci delete firewall.${uciKey}`,
+    `uci delete firewall.${formattedKey}`,
     `uci commit firewall`,
     `/etc/init.d/firewall restart`,
   ];
 }
-
 // 🔥 DNS BLOCK
 async function buildDNSBlockingCommands({ domainOrURL }) {
   const sanitizedDomain = domainOrURL.trim().replace(/^https?:\/\//, "").split("/")[0];
