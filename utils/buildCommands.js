@@ -7,7 +7,10 @@ function buildPortBlockingCommands({ portRange, protocol }) {
   const commands = [];
 
   zones.forEach((zone) => {
-    const ruleName = `block_${protocol}_${portRange.replace(":", "-")}_${zone}_${Date.now()}`;
+    const ruleName = `block_${protocol}_${portRange.replace(
+      ":",
+      "-"
+    )}_${zone}_${Date.now()}`;
     commands.push(
       `uci add firewall rule`,
       `uci set firewall.@rule[-1].name='${ruleName}'`,
@@ -33,13 +36,21 @@ function buildPortBlockingDeleteCommand(uciKey) {
 }
 
 // 🔥 PORT YÖNLENDİRME KOMUTLARI
-function buildPortForwardingCommands({ sourceIP, destinationIP, sourcePort, destinationPort, protocol }) {
+function buildPortForwardingCommands({
+  sourceIP,
+  destinationIP,
+  sourcePort,
+  destinationPort,
+  protocol,
+}) {
   const timestamp = Date.now();
   const interfaces = ["wan", "lan"];
   const commands = [];
 
   for (const iface of interfaces) {
-    const ruleName = `forward_${iface}_${protocol}_${sourcePort || "any"}_${destinationPort}_${timestamp}`;
+    const ruleName = `forward_${iface}_${protocol}_${
+      sourcePort || "any"
+    }_${destinationPort}_${timestamp}`;
 
     commands.push(
       `uci add firewall redirect`,
@@ -82,13 +93,18 @@ function buildMACRulesCommands({ macAddress, action, startTime, endTime }) {
   const commands = [];
 
   zones.forEach((zone) => {
-    const ruleName = `mac_${action}_${zone}_${macAddress.replace(/:/g, "")}_${timestamp}`;
+    const ruleName = `mac_${action}_${zone}_${macAddress.replace(
+      /:/g,
+      ""
+    )}_${timestamp}`;
     commands.push(
       `uci add firewall rule`,
       `uci set firewall.@rule[-1].name='${ruleName}'`,
       `uci set firewall.@rule[-1].src='${zone}'`,
       `uci set firewall.@rule[-1].src_mac='${macAddress}'`,
-      `uci set firewall.@rule[-1].target='${action === "allow" ? "ACCEPT" : "REJECT"}'`
+      `uci set firewall.@rule[-1].target='${
+        action === "allow" ? "ACCEPT" : "REJECT"
+      }'`
     );
 
     if (startTime && endTime) {
@@ -113,15 +129,23 @@ function buildMACRulesDeleteCommand(uciKey) {
   ];
 }
 
-
 // 🔥 TRAFİK YÖNETİMİ KOMUTLARI
-function buildFirewallRulesCommands({ sourceIP, destinationIP, protocol, portRange, action }) {
+function buildFirewallRulesCommands({
+  sourceIP,
+  destinationIP,
+  protocol,
+  portRange,
+  action,
+}) {
   const timestamp = Date.now();
   const destZones = ["wan", "lan"];
   const commands = [];
 
   destZones.forEach((zone) => {
-    const ruleName = `traffic_${action}_${zone}_${sourceIP.replace(/\./g, "-")}_${destinationIP.replace(/\./g, "-")}_${timestamp}`;
+    const ruleName = `traffic_${action}_${zone}_${sourceIP.replace(
+      /\./g,
+      "-"
+    )}_${destinationIP.replace(/\./g, "-")}_${timestamp}`;
     commands.push(
       `uci add firewall rule`,
       `uci set firewall.@rule[-1].name='${ruleName}'`,
@@ -131,7 +155,9 @@ function buildFirewallRulesCommands({ sourceIP, destinationIP, protocol, portRan
       `uci set firewall.@rule[-1].src_ip='${sourceIP}'`,
       `uci set firewall.@rule[-1].dest_ip='${destinationIP}'`,
       `uci set firewall.@rule[-1].dest_port='${portRange}'`,
-      `uci set firewall.@rule[-1].target='${action === "allow" ? "ACCEPT" : "REJECT"}'`
+      `uci set firewall.@rule[-1].target='${
+        action === "allow" ? "ACCEPT" : "REJECT"
+      }'`
     );
   });
 
@@ -150,13 +176,22 @@ function buildFirewallDeleteCommand(uciKey) {
 }
 
 // 🔥 ZAMAN BAZLI KURALLAR
-function buildTimeBasedRulesCommands({ startTime, endTime, protocol, portRange, action }) {
+function buildTimeBasedRulesCommands({
+  startTime,
+  endTime,
+  protocol,
+  portRange,
+  action,
+}) {
   const zones = ["lan", "wan"];
   const timestamp = Date.now();
   const commands = [];
 
   zones.forEach((zone) => {
-    const ruleName = `time_${action}_${zone}_${portRange.replace("-", "_")}_${timestamp}`;
+    const ruleName = `time_${action}_${zone}_${portRange.replace(
+      "-",
+      "_"
+    )}_${timestamp}`;
     commands.push(
       `uci add firewall rule`,
       `uci set firewall.@rule[-1].name='${ruleName}'`,
@@ -164,7 +199,9 @@ function buildTimeBasedRulesCommands({ startTime, endTime, protocol, portRange, 
       `uci set firewall.@rule[-1].dest='wan'`,
       `uci set firewall.@rule[-1].proto='${protocol.toLowerCase()}'`,
       `uci set firewall.@rule[-1].dest_port='${portRange}'`,
-      `uci set firewall.@rule[-1].target='${action === "allow" ? "ACCEPT" : "REJECT"}'`,
+      `uci set firewall.@rule[-1].target='${
+        action === "allow" ? "ACCEPT" : "REJECT"
+      }'`,
       `uci set firewall.@rule[-1].start_time='${startTime}'`,
       `uci set firewall.@rule[-1].stop_time='${endTime}'`
     );
@@ -178,7 +215,9 @@ function buildTimeBasedRulesCommands({ startTime, endTime, protocol, portRange, 
 
 function buildTimeBasedDeleteCommand(uciKey) {
   // Eğer zaten @rule[3] formatındaysa dokunma
-  const formattedKey = uciKey.startsWith("@rule[") ? uciKey : `@rule[${uciKey}]`;
+  const formattedKey = uciKey.startsWith("@rule[")
+    ? uciKey
+    : `@rule[${uciKey}]`;
 
   return [
     `uci delete firewall.${formattedKey}`,
@@ -188,13 +227,16 @@ function buildTimeBasedDeleteCommand(uciKey) {
 }
 // 🔥 DNS BLOCK
 async function buildDNSBlockingCommands({ domainOrURL }) {
-  const sanitizedDomain = domainOrURL.trim().replace(/^https?:\/\//, "").split("/")[0];
+  const sanitizedDomain = domainOrURL
+    .trim()
+    .replace(/^https?:\/\//, "")
+    .split("/")[0];
 
   const commands = [
     `mkdir -p /etc/dnsmasq.d`,
     `echo "address=/${sanitizedDomain}/0.0.0.0" >> /etc/dnsmasq.d/blacklist.conf`,
     `echo "address=/${sanitizedDomain}/::" >> /etc/dnsmasq.d/blacklist.conf`,
-    `/etc/init.d/dnsmasq restart`
+    `/etc/init.d/dnsmasq restart`,
   ];
 
   return commands;
@@ -213,7 +255,7 @@ function buildQoSCommands(rules) {
     const mac = rule.macAddress.toLowerCase();
     const priority = rule.priority || "low";
     const classId = classMap[priority] || "1:30";
-    const mark = index + 10;
+    const mark = parseInt(mac.replace(/:/g, ""), 16) % 1000;
 
     commands.push(
       `iptables -t mangle -A PREROUTING -m mac --mac-source ${mac} -j MARK --set-mark ${mark}`,
@@ -224,13 +266,32 @@ function buildQoSCommands(rules) {
   return commands;
 }
 
+function buildQoSDeleteCommand(mark) {
+  const hexMark = parseInt(mark).toString(16);
+
+  const commands = [
+    // iptables mangle tablosundan mark'a göre sil
+    `iptables -t mangle -D PREROUTING -m mark --mark 0x${hexMark} -j MARK --set-xmark 0x${hexMark}/0xffffffff`,
+
+    // tc filter sil
+    `tc filter delete dev br-lan parent 1:0 handle 0x${hexMark} fw`,
+  ];
+
+  return commands;
+}
+
 // 🔥 VPN / NAT
 function buildVPNRulesCommands(rules) {
   const commands = [];
   const timestamp = Date.now();
 
   rules.forEach((rule, index) => {
-    const ruleName = `${rule.ruleType}_${rule.protocol.toLowerCase()}_${rule.sourceIP.replace(/\./g, "_")}_${rule.destinationIP.replace(/\./g, "_")}_${timestamp}_${index}`;
+    const ruleName = `${
+      rule.ruleType
+    }_${rule.protocol.toLowerCase()}_${rule.sourceIP.replace(
+      /\./g,
+      "_"
+    )}_${rule.destinationIP.replace(/\./g, "_")}_${timestamp}_${index}`;
 
     if (rule.ruleType === "vpn") {
       commands.push(
@@ -244,7 +305,9 @@ function buildVPNRulesCommands(rules) {
       );
 
       if (rule.portRange) {
-        commands.push(`uci set firewall.@rule[-1].dest_port='${rule.portRange}'`);
+        commands.push(
+          `uci set firewall.@rule[-1].dest_port='${rule.portRange}'`
+        );
       }
 
       commands.push(`uci set firewall.@rule[-1].target='REJECT'`);
@@ -264,7 +327,9 @@ function buildVPNRulesCommands(rules) {
       if (rule.portRange) {
         const [fromPort, toPort] = rule.portRange.split("-");
         commands.push(`uci set firewall.@redirect[-1].src_dport='${fromPort}'`);
-        commands.push(`uci set firewall.@redirect[-1].dest_port='${toPort || fromPort}'`);
+        commands.push(
+          `uci set firewall.@redirect[-1].dest_port='${toPort || fromPort}'`
+        );
       }
 
       commands.push(`uci set firewall.@redirect[-1].target='DNAT'`);
@@ -290,5 +355,6 @@ module.exports = {
   buildDNSBlockingCommands,
   buildQoSCommands,
   buildVPNRulesCommands,
-  buildMACRulesDeleteCommand
+  buildMACRulesDeleteCommand,
+  buildQoSDeleteCommand,
 };
