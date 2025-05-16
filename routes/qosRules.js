@@ -1,13 +1,15 @@
+// routes/qosRules.js
+
 const express = require("express");
 const router = express.Router();
 const sendToOpenWRT = require("../utils/openwrtSSH");
-const fetchQoSRules = require("../utils/fetchQoSRules"); // yeni doğru fetch
+const fetchQoSRules = require("../utils/fetchQoSRules");
 const {
   buildQoSCommands,
   buildQoSDeleteCommand,
 } = require("../utils/buildCommands");
 
-// 🔥 QoS - POST (kurallar gönderilir)
+// 🔥 QoS - POST
 router.post("/", async (req, res) => {
   try {
     const rules = req.body.rules || [];
@@ -20,7 +22,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-// 🔍 QoS - GET (ipt + tc)
+// 🔍 QoS - GET
 router.get("/", async (req, res) => {
   try {
     fetchQoSRules((err, output) => {
@@ -40,20 +42,23 @@ router.get("/", async (req, res) => {
 
       const rules = [];
 
+      // 🔹 iptables: MAC + MARK topla
       const iptLines = iptablesPart.split("\n").filter(Boolean);
       iptLines.forEach((line) => {
         const macMatch = line.match(/--mac-source ([\w:]+)/);
         const markMatch = line.match(/--set-xmark 0x([a-fA-F0-9]+)/);
+
         if (macMatch && markMatch) {
           rules.push({
             mac: macMatch[1],
             mark: parseInt(markMatch[1], 16),
-            priority: "",
-            classId: "",
+            priority: "",   // Sonradan eşlenecek
+            classId: "",    // Sonradan eşlenecek
           });
         }
       });
 
+      // 🔹 tc filter: mark + classid eşle
       const tcLines = tcPart.split("\n").filter(Boolean);
       tcLines.forEach((line) => {
         const markMatch = line.match(/handle 0x([a-fA-F0-9]+)/);
@@ -62,15 +67,21 @@ router.get("/", async (req, res) => {
         if (markMatch && classMatch) {
           const mark = parseInt(markMatch[1], 16);
           const classId = classMatch[1];
+
+          // Aynı mark'a sahip olan ilk kuralı bul
           const rule = rules.find((r) => r.mark === mark);
           if (rule) {
             rule.classId = classId;
+
+            // classId'den priority çöz
             rule.priority =
               classId === "1:10"
                 ? "high"
                 : classId === "1:20"
                 ? "medium"
-                : "low";
+                : classId === "1:30"
+                ? "low"
+                : "*"; // tanımsız class
           }
         }
       });
@@ -83,7 +94,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// ❌ QoS - DELETE (mark üzerinden silinir)
+// ❌ QoS - DELETE
 router.delete("/:mark", async (req, res) => {
   const { mark } = req.params;
 

@@ -242,23 +242,41 @@ async function buildDNSBlockingCommands({ domainOrURL }) {
   return commands;
 }
 
-// 🔥 QOS
+// buildCommands.js
+
 function buildQoSCommands(rules) {
   const commands = [];
-  const classMap = {
-    high: "1:10",
-    medium: "1:20",
-    low: "1:30",
+
+  const priorityMap = {
+    high: { classId: "1:10", rate: "40960kbit" }, // 40 MB/s
+    medium: { classId: "1:20", rate: "30720kbit" }, // 30 MB/s
+    low: { classId: "1:30", rate: "10240kbit" }, // 10 MB/s
   };
+
+  const addedClasses = new Set();
 
   rules.forEach((rule, index) => {
     const mac = rule.macAddress.toLowerCase();
     const priority = rule.priority || "low";
-    const classId = classMap[priority] || "1:30";
-    const mark = parseInt(mac.replace(/:/g, ""), 16) % 1000;
+
+    // MAC adresini hex'e çevirip küçük değer üret, ardından index ile benzersiz hale getir
+    const macHex = parseInt(mac.replace(/:/g, ""), 16);
+    const mark = (macHex + index) % 65535;
+
+    const { classId, rate } = priorityMap[priority];
+
+    if (!addedClasses.has(classId)) {
+      commands.push(
+        `tc class add dev br-lan parent 1: classid ${classId} htb rate ${rate} ceil ${rate}`
+      );
+      addedClasses.add(classId);
+    }
 
     commands.push(
-      `iptables -t mangle -A PREROUTING -m mac --mac-source ${mac} -j MARK --set-mark ${mark}`,
+      `iptables -t mangle -A PREROUTING -m mac --mac-source ${mac} -j MARK --set-mark ${mark}`
+    );
+
+    commands.push(
       `tc filter add dev br-lan protocol ip parent 1:0 prio 1 handle ${mark} fw flowid ${classId}`
     );
   });
@@ -268,18 +286,11 @@ function buildQoSCommands(rules) {
 
 function buildQoSDeleteCommand(mark) {
   const hexMark = parseInt(mark).toString(16);
-
-  const commands = [
-    // iptables mangle tablosundan mark'a göre sil
+  return [
     `iptables -t mangle -D PREROUTING -m mark --mark 0x${hexMark} -j MARK --set-xmark 0x${hexMark}/0xffffffff`,
-
-    // tc filter sil
     `tc filter delete dev br-lan parent 1:0 handle 0x${hexMark} fw`,
   ];
-
-  return commands;
 }
-
 // 🔥 VPN / NAT
 function buildVPNRulesCommands(rules) {
   const commands = [];
