@@ -1,7 +1,7 @@
-// routes/timeBasedRules.js
-
 const express = require("express");
 const router = express.Router();
+const fs = require("fs");
+const path = require("path");
 const {
   buildTimeBasedRulesCommands,
   buildTimeBasedDeleteCommand,
@@ -19,6 +19,24 @@ router.post("/", async (req, res) => {
       allCommands.push(...commands);
     }
     await sendToOpenWRT(allCommands);
+
+    // 📁 CSV Loglama
+    const logDir = path.join(__dirname, "../logs");
+    const logFile = path.join(logDir, "time_based_log.csv");
+
+    if (!fs.existsSync(logDir)) {
+      fs.mkdirSync(logDir, { recursive: true });
+    }
+
+    const timestamp = new Date().toISOString();
+    const logEntries = rules.map(rule => {
+      const jsonString = JSON.stringify(rule).replace(/"/g, '""');
+      return `"${timestamp}","${jsonString}"`;
+    }).join("\n") + "\n";
+
+    fs.appendFileSync(logFile, logEntries, "utf8");
+    console.log("✅ Log kaydı oluşturuldu:", logFile);
+
     setTimeout(() => {
       res.json({ message: "Zaman bazlı kurallar başarıyla uygulandı." });
     }, 1000);

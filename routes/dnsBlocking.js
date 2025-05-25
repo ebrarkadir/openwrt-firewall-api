@@ -1,8 +1,22 @@
 const express = require("express");
+const fs = require("fs");
+const path = require("path");
 const router = express.Router();
+
 const sendToOpenWRT = require("../utils/openwrtSSH");
-const { buildDNSBlockingCommands, buildDNSBlockingDeleteCommand } = require("../utils/buildCommands");
+const {
+  buildDNSBlockingCommands,
+  buildDNSBlockingDeleteCommand,
+} = require("../utils/buildCommands");
 const fetchDnsRules = require("../utils/fetchDnsRules");
+
+// CSV loglama fonksiyonu
+const logFilePath = path.join(__dirname, "../logs/dns_rules_log.csv");
+
+function logToCSV(domain) {
+  const logLine = `${new Date().toISOString()},${domain}\n`;
+  fs.appendFileSync(logFilePath, logLine, "utf8");
+}
 
 // 🔥 POST - /api/dnsblocking/rules/
 router.post("/", async (req, res) => {
@@ -18,6 +32,11 @@ router.post("/", async (req, res) => {
     for (const rule of rules) {
       const cmds = await buildDNSBlockingCommands(rule);
       allCommands.push(...cmds);
+
+      // ✅ Logla
+      if (rule.domainOrURL) {
+        logToCSV(rule.domainOrURL);
+      }
     }
 
     await sendToOpenWRT(allCommands);
@@ -30,8 +49,11 @@ router.post("/", async (req, res) => {
 
 // 🔍 GET - /api/dnsblocking/rules/
 router.get("/", async (req, res) => {
+  console.log("🔍 DNS GET İsteği Alındı");
   try {
     const domains = await fetchDnsRules();
+    console.log("🔍 DNS Kuralları:", domains);
+
     res.status(200).json({ rules: domains });
   } catch (error) {
     console.error("❌ DNS GET Hatası:", error.message);

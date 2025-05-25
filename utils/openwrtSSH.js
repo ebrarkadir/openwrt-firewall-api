@@ -8,7 +8,7 @@ async function sendToOpenWRT(commands) {
       console.log('✅ SSH bağlantısı başarılı!');
 
       for (const cmd of commands) {
-        console.log('🚀 Komut gönderiliyor:', cmd); // 👈 yeni eklendi
+        console.log('🚀 Komut gönderiliyor:', cmd);
 
         await new Promise((resolve, reject) => {
           conn.exec(cmd, (err, stream) => {
@@ -16,8 +16,19 @@ async function sendToOpenWRT(commands) {
 
             stream
               .on('close', () => resolve())
-              .on('data', (data) => console.log('📥 stdout:', data.toString()))
-              .stderr.on('data', (data) => console.error('❌ stderr:', data.toString()));
+              .on('data', (data) => {
+                const output = data.toString().trim();
+                if (output) {
+                  console.log('📥 stdout:', output);
+                }
+              })
+              .stderr.on('data', (data) => {
+                const msg = data.toString();
+                // ❗️udhcpc gibi gereksiz uyarıları filtrele
+                if (!msg.includes('udhcpc')) {
+                  console.error('❌ stderr:', msg.trim());
+                }
+              });
           });
         });
       }

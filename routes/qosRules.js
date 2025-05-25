@@ -1,7 +1,8 @@
-// routes/qosRules.js
-
 const express = require("express");
 const router = express.Router();
+const fs = require("fs");
+const path = require("path");
+
 const sendToOpenWRT = require("../utils/openwrtSSH");
 const fetchQoSRules = require("../utils/fetchQoSRules");
 const {
@@ -9,12 +10,24 @@ const {
   buildQoSDeleteCommand,
 } = require("../utils/buildCommands");
 
+// 📁 Log dosyası yolu
+const logPath = path.join(__dirname, "../logs/qos_rules_log.csv");
+
 // 🔥 QoS - POST
 router.post("/", async (req, res) => {
   try {
     const rules = req.body.rules || [];
     const commands = buildQoSCommands(rules);
     await sendToOpenWRT(commands);
+
+    // 📝 LOG KAYDI
+    const timestamp = new Date().toISOString();
+    const logLines = rules.map(rule => {
+      const serialized = JSON.stringify(rule).replace(/"/g, '""');
+      return `"${timestamp}","${serialized}"`;
+    });
+    fs.appendFileSync(logPath, logLines.join("\n") + "\n", "utf8");
+
     res.json({ message: "QoS kuralları gönderildi.", success: true });
   } catch (err) {
     console.error("QoS kuralı hatası:", err);
@@ -42,7 +55,6 @@ router.get("/", async (req, res) => {
 
       const rules = [];
 
-      // 🔹 iptables: MAC + MARK topla
       const iptLines = iptablesPart.split("\n").filter(Boolean);
       iptLines.forEach((line) => {
         const macMatch = line.match(/--mac-source ([\w:]+)/);
@@ -52,13 +64,12 @@ router.get("/", async (req, res) => {
           rules.push({
             mac: macMatch[1],
             mark: parseInt(markMatch[1], 16),
-            priority: "",   // Sonradan eşlenecek
-            classId: "",    // Sonradan eşlenecek
+            priority: "",
+            classId: "",
           });
         }
       });
 
-      // 🔹 tc filter: mark + classid eşle
       const tcLines = tcPart.split("\n").filter(Boolean);
       tcLines.forEach((line) => {
         const markMatch = line.match(/handle 0x([a-fA-F0-9]+)/);
@@ -68,12 +79,9 @@ router.get("/", async (req, res) => {
           const mark = parseInt(markMatch[1], 16);
           const classId = classMatch[1];
 
-          // Aynı mark'a sahip olan ilk kuralı bul
           const rule = rules.find((r) => r.mark === mark);
           if (rule) {
             rule.classId = classId;
-
-            // classId'den priority çöz
             rule.priority =
               classId === "1:10"
                 ? "high"
@@ -81,7 +89,7 @@ router.get("/", async (req, res) => {
                 ? "medium"
                 : classId === "1:30"
                 ? "low"
-                : "*"; // tanımsız class
+                : "*";
           }
         }
       });
@@ -94,7 +102,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// ❌ QoS - DELETE (GÜNCELLENMİŞ)
+// ❌ QoS - DELETE
 router.delete("/", async (req, res) => {
   const { mark, mac } = req.body;
 
@@ -111,7 +119,5 @@ router.delete("/", async (req, res) => {
     res.status(500).json({ error: "Kural silinemedi." });
   }
 });
-
-
 
 module.exports = router;

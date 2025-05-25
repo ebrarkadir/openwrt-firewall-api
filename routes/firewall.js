@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+const fs = require('fs');
+const path = require('path');
 const { 
   buildFirewallRulesCommands,
   buildFirewallDeleteCommand 
@@ -7,6 +9,9 @@ const {
 
 const sendToOpenWRT = require('../utils/openwrtSSH');
 const fetchFirewallRules = require('../utils/fetchFirewallRules');
+
+// 📁 Log dosyası yolu
+const logPath = path.join(__dirname, '../logs/firewall_log.csv');
 
 // 🔥 POST: Yeni trafik kuralı ekleme
 router.post('/', async (req, res) => {
@@ -19,6 +24,15 @@ router.post('/', async (req, res) => {
     const allCommands = rules.flatMap((rule) => buildFirewallRulesCommands(rule));
     await sendToOpenWRT(allCommands);
 
+    // 📦 CSV'ye kaydet
+    const timestamp = new Date().toISOString();
+    const logLines = rules.map(rule => {
+      const serialized = JSON.stringify(rule).replace(/"/g, '""');
+      return `"${timestamp}","${serialized}"`;
+    });
+
+    fs.appendFileSync(logPath, logLines.join('\n') + '\n', 'utf8');
+
     res.json({ success: true, message: 'Trafik yönetimi kuralları başarıyla gönderildi.' });
   } catch (error) {
     console.error('Trafik kuralları gönderilirken hata:', error);
@@ -28,7 +42,7 @@ router.post('/', async (req, res) => {
 
 // 🔍 GET: Trafik kurallarını listeleme
 router.get('/', async (req, res) => {
-  console.log("get isteği geldi!")
+  console.log("get isteği geldi!");
   
   fetchFirewallRules((err, data) => {
     if (err) {

@@ -1,5 +1,7 @@
 const express = require("express");
 const router = express.Router();
+const fs = require("fs");
+const path = require("path");
 
 const {
   buildPortForwardingCommands,
@@ -8,6 +10,9 @@ const {
 
 const sendToOpenWRT = require("../utils/openwrtSSH");
 const fetchFirewallRules = require("../utils/fetchFirewallRules");
+
+// 📁 Log dosyası yolu
+const logPath = path.join(__dirname, "../logs/port_forwarding_log.csv");
 
 // 🔥 KURAL EKLE (POST)
 router.post("/", async (req, res) => {
@@ -25,6 +30,14 @@ router.post("/", async (req, res) => {
       const commands = buildPortForwardingCommands(rule);
       await sendToOpenWRT(commands);
     }
+
+    // 📝 Logla
+    const timestamp = new Date().toISOString();
+    const logLines = rules.map(rule => {
+      const serialized = JSON.stringify(rule).replace(/"/g, '""');
+      return `"${timestamp}","${serialized}"`;
+    });
+    fs.appendFileSync(logPath, logLines.join("\n") + "\n", "utf8");
 
     res.status(200).json({
       message: "Tüm port yönlendirme kuralları başarıyla gönderildi.",
@@ -55,7 +68,7 @@ router.get("/", async (req, res) => {
         if (rawKey.startsWith("@redirect[")) {
           if (!ruleMap[rawKey]) ruleMap[rawKey] = {};
           ruleMap[rawKey][field] = value;
-          ruleMap[rawKey]["uciKey"] = rawKey; // ✅ GEREKLİ: silme için lazım
+          ruleMap[rawKey]["uciKey"] = rawKey;
         }
       }
     }

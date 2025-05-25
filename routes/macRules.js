@@ -1,11 +1,16 @@
 const express = require('express');
 const router = express.Router();
+const fs = require('fs');
+const path = require('path');
 const {
   buildMACRulesCommands,
   buildMACRulesDeleteCommand
 } = require('../utils/buildCommands');
 const sendToOpenWRT = require('../utils/openwrtSSH');
 const fetchFirewallRules = require('../utils/fetchFirewallRules');
+
+// 📁 Log dosyası yolu
+const logPath = path.join(__dirname, '../logs/mac_rules_log.csv');
 
 // 🔥 POST: MAC Kuralı Ekle
 router.post('/', async (req, res) => {
@@ -17,8 +22,16 @@ router.post('/', async (req, res) => {
     }
 
     const allCommands = rules.flatMap((rule) => buildMACRulesCommands(rule));
-
     await sendToOpenWRT(allCommands);
+
+    // 📝 CSV'ye log ekle
+    const timestamp = new Date().toISOString();
+    const logLines = rules.map(rule => {
+      const serialized = JSON.stringify(rule).replace(/"/g, '""');
+      return `"${timestamp}","${serialized}"`;
+    });
+
+    fs.appendFileSync(logPath, logLines.join('\n') + '\n', 'utf8');
 
     res.json({ success: true, message: 'MAC kuralları başarıyla gönderildi.' });
   } catch (error) {

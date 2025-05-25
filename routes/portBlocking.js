@@ -1,8 +1,13 @@
 const express = require("express");
 const router = express.Router();
+const fs = require("fs");
+const path = require("path");
 const fetchFirewallRules = require("../utils/fetchFirewallRules");
 const sendToOpenWRT = require("../utils/openwrtSSH");
 const { buildPortBlockingCommands } = require("../utils/buildCommands");
+
+// 📁 Log dosyası yolu
+const logPath = path.join(__dirname, "../logs/port_blocking_log.csv");
 
 // 🔍 Kuralları Listele
 router.get("/", async (req, res) => {
@@ -21,7 +26,6 @@ router.get("/", async (req, res) => {
         if (!ruleMap[rawKey]) ruleMap[rawKey] = {};
         ruleMap[rawKey][field] = value;
 
-        // UCI anahtarı ekle (örnek: rule3)
         ruleMap[rawKey]["uciKey"] = rawKey;
       }
     }
@@ -35,6 +39,7 @@ router.get("/", async (req, res) => {
     res.json(filtered);
   });
 });
+
 // 🔥 Yeni Kural Ekle
 router.post("/", async (req, res) => {
   const { rules } = req.body;
@@ -46,6 +51,16 @@ router.post("/", async (req, res) => {
     }
     allCommands.push(`uci commit firewall`, `/etc/init.d/firewall restart`);
     await sendToOpenWRT(allCommands);
+
+    // 📝 Log ekle
+    const timestamp = new Date().toISOString();
+    const logLines = rules.map(rule => {
+      const serialized = JSON.stringify(rule).replace(/"/g, '""');
+      return `"${timestamp}","${serialized}"`;
+    });
+
+    fs.appendFileSync(logPath, logLines.join('\n') + '\n', 'utf8');
+
     res.json({ message: "Kurallar eklendi" });
   } catch (err) {
     console.error("Ekleme hatası:", err.message);
@@ -57,7 +72,7 @@ router.post("/", async (req, res) => {
 router.delete("/:rawUciKey", async (req, res) => {
   const { rawUciKey } = req.params;
 
-  console.log("🧨 UI'dan gelen silinecek anahtar:", rawUciKey); // örnek: @rule[3]
+  console.log("🧨 UI'dan gelen silinecek anahtar:", rawUciKey);
 
   if (!rawUciKey.startsWith("@rule[")) {
     return res.status(400).json({ error: "Geçersiz UCI anahtarı" });
