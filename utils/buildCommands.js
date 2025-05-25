@@ -242,6 +242,20 @@ async function buildDNSBlockingCommands({ domainOrURL }) {
   return commands;
 }
 
+function buildDNSBlockingDeleteCommand(domain) {
+  const sanitizedDomain = domain
+    .trim()
+    .replace(/^https?:\/\//, "")
+    .split("/")[0];
+
+  const commands = [
+    `sed -i '/address=\\/${sanitizedDomain}\\//d' /etc/dnsmasq.d/blacklist.conf`,
+    `/etc/init.d/dnsmasq restart`,
+  ];
+
+  return commands;
+}
+
 // buildCommands.js
 
 function buildQoSCommands(rules) {
@@ -379,4 +393,5 @@ module.exports = {
   buildVPNRulesCommands,
   buildMACRulesDeleteCommand,
   buildQoSDeleteCommand,
+  buildDNSBlockingDeleteCommand
 };

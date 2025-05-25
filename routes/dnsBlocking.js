@@ -1,12 +1,11 @@
 const express = require("express");
-const fs = require("fs");
 const router = express.Router();
+const { Client } = require("ssh2");
 const sendToOpenWRT = require("../utils/openwrtSSH");
-const { buildDNSBlockingCommands } = require("../utils/buildCommands");
+const { buildDNSBlockingCommands, buildDNSBlockingDeleteCommand } = require("../utils/buildCommands");
+const fetchDnsRules = require("../utils/fetchDnsRules");
 
-const BLACKLIST_PATH = "/etc/dnsmasq.d/blacklist.conf";
-
-// 🔥 POST - /api/dnsblocking/rules
+// 🔥 POST - DNS kurallarını gönder
 router.post("/", async (req, res) => {
   try {
     const { rules } = req.body;
@@ -23,7 +22,6 @@ router.post("/", async (req, res) => {
     }
 
     await sendToOpenWRT(allCommands);
-
     res.status(200).json({ message: "DNS kuralları başarıyla gönderildi!" });
   } catch (err) {
     console.error("❌ POST DNS Hatası:", err);
@@ -31,37 +29,35 @@ router.post("/", async (req, res) => {
   }
 });
 
-// 🔍 GET - /api/dnsblocking/rules
+// 🔍 GET - DNS kurallarını getir (OpenWRT üzerinden)
 router.get("/", async (req, res) => {
   try {
-    if (!fs.existsSync(BLACKLIST_PATH)) {
-      return res.status(200).json({ rules: [] });
-    }
-
-    const content = fs.readFileSync(BLACKLIST_PATH, "utf8");
-
-    // Satırları temizle
-    const lines = content.split("\n").map(line => line.trim()).filter(line =>
-      line.startsWith("address=/")
-    );
-
-    // Domainleri çek
-    const domains = lines.map(line => {
-      // Örn: address=/youtube.com/0.0.0.0
-      const parts = line.split("/");
-      return parts.length >= 3 ? parts[1] : null;
-    }).filter(Boolean);
-
-    const uniqueDomains = [...new Set(domains)];
-
-    console.log("✅ Aktif DNS Kuralları:", uniqueDomains);
-
-    res.status(200).json({ rules: uniqueDomains });
-  } catch (err) {
-    console.error("❌ GET DNS Hatası:", err);
-    res.status(500).json({ error: "blacklist.conf okunamadı." });
+    const domains = await fetchDnsRules();
+    res.status(200).json({ rules: domains });
+  } catch (error) {
+    console.error("❌ DNS GET Hatası:", error.message);
+    res.status(500).json({ error: error.message });
   }
 });
 
+// ❌ DELETE - DNS kuralını sil (OpenWRT üzerinden)
+router.delete("/rules/:domain", (req, res) => {
+  const domain = req.params.domain;
 
+  if (!domain) {
+    return res.status(400).json({ error: "Silinecek domain belirtilmedi." });
+  }
+
+  const cmds = buildDNSBlockingDeleteCommand(domain);
+
+  sendToOpenWRT(cmds)
+    .then(() => {
+      // 🔥 burada sadece JSON dön
+      res.status(200).json({ message: `${domain} başarıyla silindi.` });
+    })
+    .catch((err) => {
+      console.error("❌ Silme hatası:", err.message);
+      res.status(500).json({ error: "Silme işlemi başarısız." });
+    });
+});
 module.exports = router;
