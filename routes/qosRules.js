@@ -94,16 +94,16 @@ router.get("/", async (req, res) => {
   }
 });
 
-// ❌ QoS - DELETE
-router.delete("/:mark", async (req, res) => {
-  const { mark } = req.params;
+// ❌ QoS - DELETE (GÜNCELLENMİŞ)
+router.delete("/", async (req, res) => {
+  const { mark, mac } = req.body;
 
-  if (!mark) {
-    return res.status(400).json({ error: "Mark değeri gerekli." });
+  if (!mark || !mac) {
+    return res.status(400).json({ error: "Mark ve MAC adresi gerekli." });
   }
 
   try {
-    const commands = buildQoSDeleteCommand(mark);
+    const commands = buildQoSDeleteCommand(mac, mark);
     await sendToOpenWRT(commands);
     res.json({ message: "QoS kuralı silindi.", success: true });
   } catch (error) {
@@ -111,5 +111,7 @@ router.delete("/:mark", async (req, res) => {
     res.status(500).json({ error: "Kural silinemedi." });
   }
 });
+
+
 
 module.exports = router;

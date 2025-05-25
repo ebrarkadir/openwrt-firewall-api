@@ -1,21 +1,29 @@
 const { Client } = require('ssh2');
 
-function sendToOpenWRT(commands) {
+async function sendToOpenWRT(commands) {
   const conn = new Client();
+
   conn
-    .on('ready', () => {
+    .on('ready', async () => {
       console.log('✅ SSH bağlantısı başarılı!');
-      conn.exec(commands.join(' && '), (err, stream) => {
-        if (err) throw err;
-        stream
-          .on('close', () => {
-            console.log('🔒 SSH bağlantısı kapatıldı.');
-            conn.end();
-          })
-          .on('data', (data) => {
-            console.log('📥 Kural ID:', data.toString());
+
+      for (const cmd of commands) {
+        console.log('🚀 Komut gönderiliyor:', cmd); // 👈 yeni eklendi
+
+        await new Promise((resolve, reject) => {
+          conn.exec(cmd, (err, stream) => {
+            if (err) return reject(err);
+
+            stream
+              .on('close', () => resolve())
+              .on('data', (data) => console.log('📥 stdout:', data.toString()))
+              .stderr.on('data', (data) => console.error('❌ stderr:', data.toString()));
           });
-      });
+        });
+      }
+
+      console.log('🔒 SSH bağlantısı kapatıldı.');
+      conn.end();
     })
     .on('error', (err) => {
       console.error('❌ SSH bağlantı hatası:', err.message);
@@ -28,5 +36,4 @@ function sendToOpenWRT(commands) {
     });
 }
 
-// 🔥 Bu satır çok önemli!
 module.exports = sendToOpenWRT;

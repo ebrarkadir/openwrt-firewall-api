@@ -247,10 +247,13 @@ async function buildDNSBlockingCommands({ domainOrURL }) {
 function buildQoSCommands(rules) {
   const commands = [];
 
+  // ✅ qdisc tanımı eklenmeli, varsa hata vermesin diye || true
+  commands.push(`tc qdisc add dev br-lan root handle 1: htb default 30 || true`);
+
   const priorityMap = {
-    high: { classId: "1:10", rate: "40960kbit" }, // 40 MB/s
-    medium: { classId: "1:20", rate: "30720kbit" }, // 30 MB/s
-    low: { classId: "1:30", rate: "10240kbit" }, // 10 MB/s
+    high: { classId: "1:10", rate: "40960kbit" },
+    medium: { classId: "1:20", rate: "30720kbit" },
+    low: { classId: "1:30", rate: "10240kbit" },
   };
 
   const addedClasses = new Set();
@@ -258,24 +261,25 @@ function buildQoSCommands(rules) {
   rules.forEach((rule, index) => {
     const mac = rule.macAddress.toLowerCase();
     const priority = rule.priority || "low";
-
-    // MAC adresini hex'e çevirip küçük değer üret, ardından index ile benzersiz hale getir
     const macHex = parseInt(mac.replace(/:/g, ""), 16);
     const mark = (macHex + index) % 65535;
 
     const { classId, rate } = priorityMap[priority];
 
+    // Sınıfı sadece 1 kez ekle
     if (!addedClasses.has(classId)) {
       commands.push(
-        `tc class add dev br-lan parent 1: classid ${classId} htb rate ${rate} ceil ${rate}`
+        `tc class add dev br-lan parent 1: classid ${classId} htb rate ${rate} ceil ${rate} || true`
       );
       addedClasses.add(classId);
     }
 
+    // iptables kuralı
     commands.push(
       `iptables -t mangle -A PREROUTING -m mac --mac-source ${mac} -j MARK --set-mark ${mark}`
     );
 
+    // tc filter ile sınıfa bağla
     commands.push(
       `tc filter add dev br-lan protocol ip parent 1:0 prio 1 handle ${mark} fw flowid ${classId}`
     );
@@ -284,13 +288,20 @@ function buildQoSCommands(rules) {
   return commands;
 }
 
-function buildQoSDeleteCommand(mark) {
-  const hexMark = parseInt(mark).toString(16);
+function buildQoSDeleteCommand(mac, mark) {
+  const hexMark = Number(mark).toString(16);
+  const macLower = mac.toLowerCase();
+
   return [
-    `iptables -t mangle -D PREROUTING -m mark --mark 0x${hexMark} -j MARK --set-xmark 0x${hexMark}/0xffffffff`,
     `tc filter delete dev br-lan parent 1:0 handle 0x${hexMark} fw`,
+    `iptables -t mangle -D PREROUTING -m mac --mac-source ${macLower} -j MARK --set-xmark 0x${hexMark}/0xffffffff`,
   ];
 }
+
+
+
+
+
 // 🔥 VPN / NAT
 function buildVPNRulesCommands(rules) {
   const commands = [];
