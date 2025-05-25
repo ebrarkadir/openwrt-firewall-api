@@ -15,7 +15,7 @@ const portForwardingRoutes = require('./routes/portForwarding');
 const macRulesRoutes = require('./routes/macRules'); // MAC Routes doğru geldi
 const firewallRoutes = require('./routes/firewall'); // Firewall Routes doğru geldi
 const timeBasedRulesRoutes = require('./routes/timeBasedRules');
-const dnsBlockingRoutes = require("./routes/dnsBlocking");// DNS Blocking Routes doğru geldi
+const dnsBlockingRoutes = require('./routes/dnsBlocking'); // DNS Blocking Routes doğru geldi
 const qosRulesRoutes = require('./routes/qosRules');
 const vpnNatRoutes = require('./routes/vpn-nat'); // VPN/NAT Routes doğru geldi
 
@@ -25,7 +25,7 @@ app.use('/api/portforwarding/rules', portForwardingRoutes);
 app.use('/api/macrouting/rules', macRulesRoutes);
 app.use('/api/firewall/rules', firewallRoutes);
 app.use('/api/timebased/rules', timeBasedRulesRoutes); // 🔥 BURAYA EKLEDİK
-app.use("/api/dnsblocking", dnsBlockingRoutes); // DNS Blocking Routes doğru geldi
+app.use('/api/dnsblocking/rules', dnsBlockingRoutes); // DNS Blocking Routes doğru geldi
 app.use('/api/qos/rules', qosRulesRoutes);
 app.use('/api/vpn-nat/rules', vpnNatRoutes); // VPN/NAT Routes doğru geldi
 

@@ -1,11 +1,10 @@
 const express = require("express");
 const router = express.Router();
-const { Client } = require("ssh2");
 const sendToOpenWRT = require("../utils/openwrtSSH");
 const { buildDNSBlockingCommands, buildDNSBlockingDeleteCommand } = require("../utils/buildCommands");
 const fetchDnsRules = require("../utils/fetchDnsRules");
 
-// 🔥 POST - DNS kurallarını gönder
+// 🔥 POST - /api/dnsblocking/rules/
 router.post("/", async (req, res) => {
   try {
     const { rules } = req.body;
@@ -29,7 +28,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-// 🔍 GET - DNS kurallarını getir (OpenWRT üzerinden)
+// 🔍 GET - /api/dnsblocking/rules/
 router.get("/", async (req, res) => {
   try {
     const domains = await fetchDnsRules();
@@ -40,8 +39,8 @@ router.get("/", async (req, res) => {
   }
 });
 
-// ❌ DELETE - DNS kuralını sil (OpenWRT üzerinden)
-router.delete("/rules/:domain", (req, res) => {
+// ❌ DELETE - /api/dnsblocking/rules/:domain
+router.delete("/:domain", (req, res) => {
   const domain = req.params.domain;
 
   if (!domain) {
@@ -52,7 +51,6 @@ router.delete("/rules/:domain", (req, res) => {
 
   sendToOpenWRT(cmds)
     .then(() => {
-      // 🔥 burada sadece JSON dön
       res.status(200).json({ message: `${domain} başarıyla silindi.` });
     })
     .catch((err) => {
@@ -60,4 +58,5 @@ router.delete("/rules/:domain", (req, res) => {
       res.status(500).json({ error: "Silme işlemi başarısız." });
     });
 });
+
 module.exports = router;
