@@ -7,17 +7,16 @@ function buildPortBlockingCommands({ portRange, protocol }) {
   const commands = [];
 
   zones.forEach((zone) => {
-    const ruleName = `block_${protocol}_${portRange.replace(
-      ":",
-      "-"
-    )}_${zone}_${Date.now()}`;
+    const ruleName = `block_${protocol}_${portRange.replace(":", "-")}_${zone}_${Date.now()}`;
     commands.push(
       `uci add firewall rule`,
       `uci set firewall.@rule[-1].name='${ruleName}'`,
       `uci set firewall.@rule[-1].src='${zone}'`,
       `uci set firewall.@rule[-1].proto='${protocol.toLowerCase()}'`,
       `uci set firewall.@rule[-1].dest_port='${portRange}'`,
-      `uci set firewall.@rule[-1].target='REJECT'`
+      `uci set firewall.@rule[-1].target='REJECT'`,
+      `uci set firewall.@rule[-1].log='1'`,
+      `uci set firewall.@rule[-1].log_prefix='BLOCKED_${protocol.toUpperCase()}_${portRange}'`
     );
   });
 
@@ -26,6 +25,7 @@ function buildPortBlockingCommands({ portRange, protocol }) {
 
   return commands;
 }
+
 
 function buildPortBlockingDeleteCommand(uciKey) {
   return [

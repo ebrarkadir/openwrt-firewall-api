@@ -10,6 +10,7 @@ app.use(cors());
 app.use(express.json());
 
 // Rotalar
+const startPortLogWatcher = require("./utils/portLogWatcher");
 const portBlockingRoutes = require('./routes/portBlocking');
 const portForwardingRoutes = require('./routes/portForwarding');
 const macRulesRoutes = require('./routes/macRules'); // MAC Routes doğru geldi
@@ -27,7 +28,7 @@ app.use('/api/firewall/rules', firewallRoutes);
 app.use('/api/timebased/rules', timeBasedRulesRoutes); // 🔥 BURAYA EKLEDİK
 app.use('/api/dnsblocking/rules', dnsBlockingRoutes); // DNS Blocking Routes doğru geldi
 app.use('/api/qos/rules', qosRulesRoutes);
-
+startPortLogWatcher(); 
 
 
 
