@@ -93,18 +93,18 @@ function buildMACRulesCommands({ macAddress, action, startTime, endTime }) {
   const commands = [];
 
   zones.forEach((zone) => {
-    const ruleName = `mac_${action}_${zone}_${macAddress.replace(
-      /:/g,
-      ""
-    )}_${timestamp}`;
+    const ruleName = `mac_${action}_${zone}_${macAddress.replace(/:/g, "")}_${timestamp}`;
+    const logPrefix = `MAC_MATCHED_${macAddress.replace(/:/g, "")}`;
+
     commands.push(
       `uci add firewall rule`,
+      `uci set firewall.@rule[-1].proto='all'`,
       `uci set firewall.@rule[-1].name='${ruleName}'`,
       `uci set firewall.@rule[-1].src='${zone}'`,
       `uci set firewall.@rule[-1].src_mac='${macAddress}'`,
-      `uci set firewall.@rule[-1].target='${
-        action === "allow" ? "ACCEPT" : "REJECT"
-      }'`
+      `uci set firewall.@rule[-1].target='${action === "allow" ? "ACCEPT" : "REJECT"}'`,
+      `uci set firewall.@rule[-1].log='1'`,
+      `uci set firewall.@rule[-1].log_prefix='${logPrefix}'`
     );
 
     if (startTime && endTime) {
@@ -238,9 +238,16 @@ async function buildDNSBlockingCommands({ domainOrURL }) {
     .split("/")[0];
 
   const commands = [
+    // Kara liste dosyası oluştur
     `mkdir -p /etc/dnsmasq.d`,
     `echo "address=/${sanitizedDomain}/0.0.0.0" >> /etc/dnsmasq.d/blacklist.conf`,
     `echo "address=/${sanitizedDomain}/::" >> /etc/dnsmasq.d/blacklist.conf`,
+
+    // 🔍 DNS sorgularını loglamayı aktif et
+    `uci set dhcp.@dnsmasq[0].logqueries='1'`,
+    `uci commit dhcp`,
+
+    // dnsmasq servisini yeniden başlat
     `/etc/init.d/dnsmasq restart`,
   ];
 
