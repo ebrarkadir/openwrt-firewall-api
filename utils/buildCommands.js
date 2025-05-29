@@ -48,9 +48,7 @@ function buildPortForwardingCommands({
   const commands = [];
 
   for (const iface of interfaces) {
-    const ruleName = `forward_${iface}_${protocol}_${
-      sourcePort || "any"
-    }_${destinationPort}_${timestamp}`;
+    const ruleName = `forward_${iface}_${protocol}_${sourcePort || "any"}_${destinationPort}_${timestamp}`;
 
     commands.push(
       `uci add firewall redirect`,

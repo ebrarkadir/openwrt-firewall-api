@@ -6,22 +6,25 @@ const fetchLogreadOutput = require("./logFetcher");
 const portLogPath = path.join(__dirname, "../logs/port_blocking_requests_log.csv");
 const firewallLogPath = path.join(__dirname, "../logs/firewall_requests_log.csv");
 const dnsLogPath = path.join(__dirname, "../logs/dns_requests_log.csv");
-const macLogPath = path.join(__dirname, "../logs/mac_requests_log.csv"); // ✅ MAC log dosyası
+const macLogPath = path.join(__dirname, "../logs/mac_requests_log.csv");
 
-// 👮‍♂️ Sadece engellenmiş domainler loglansın
+// 👮‍♂️ Engellenmiş domainler
 const blockedDomains = ["facebook.com", "www.facebook.com", "instagram.com"];
 
-// 📁 Klasör oluştur
-const ensureDirExists = (filePath) => {
+// 📁 Klasörleri oluştur
+[
+  portLogPath,
+  firewallLogPath,
+  dnsLogPath,
+  macLogPath,
+].forEach((filePath) => {
   const dir = path.dirname(filePath);
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
-};
+});
 
-[portLogPath, firewallLogPath, dnsLogPath, macLogPath].forEach(ensureDirExists);
-
-// 🚨 Görülen logları hatırla
+// 🔁 Görülen logları hatırla
 const seenLogs = new Set();
 
 function startPortLogWatcher() {
@@ -51,13 +54,13 @@ function startPortLogWatcher() {
           fs.appendFileSync(firewallLogPath, logLine, "utf8");
         }
 
-        // 🔥 MAC adresi eşleşmesi (isteğe bağlı olarak "MAC_MATCHED_" prefixi eklenmeli OpenWRT config'e)
+        // 🔒 MAC engelleme
         if (line.includes("mac_")) {
           const logLine = `${timestamp},[MAC] ${line}\n`;
           fs.appendFileSync(macLogPath, logLine, "utf8");
         }
 
-        // 🔍 DNS - query
+        // 🌐 DNS query
         if (line.includes("dnsmasq") && line.includes("query[")) {
           const match = line.match(/query\[(.*?)\] ([^\s]+) from ([^\s]+)/);
           if (match) {
@@ -69,7 +72,7 @@ function startPortLogWatcher() {
           }
         }
 
-        // 🔒 DNS - config cevabı (ör: 0.0.0.0 dönerse bloklandığı anlamına gelir)
+        // 🧱 DNS blok
         if (line.includes("dnsmasq") && line.includes("config ")) {
           const match = line.match(/config ([^\s]+) is (.+)/);
           if (match) {
@@ -84,7 +87,7 @@ function startPortLogWatcher() {
     } catch (err) {
       console.error("❌ logread hatası:", err.message);
     }
-  }, 5000);
+  }, 5000); // her 5 saniyede bir kontrol
 }
 
 module.exports = startPortLogWatcher;
