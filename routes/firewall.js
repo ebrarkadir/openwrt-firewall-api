@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs');
 const path = require('path');
+
 const { 
   buildFirewallRulesCommands,
   buildFirewallDeleteCommand 
@@ -9,9 +10,11 @@ const {
 
 const sendToOpenWRT = require('../utils/openwrtSSH');
 const fetchFirewallRules = require('../utils/fetchFirewallRules');
+const fetchLogreadOutput = require('../utils/logFetcher');
 
-// 📁 Log dosyası yolu
-const logPath = path.join(__dirname, '../logs/firewall_log.csv');
+// 📁 Log dosyası yolları
+const ruleLogPath = path.join(__dirname, '../logs/firewall_log.csv');
+const requestLogPath = path.join(__dirname, '../logs/firewall_requests_log.csv');
 
 // 🔥 POST: Yeni trafik kuralı ekleme
 router.post('/', async (req, res) => {
@@ -24,16 +27,15 @@ router.post('/', async (req, res) => {
     const allCommands = rules.flatMap((rule) => buildFirewallRulesCommands(rule));
     await sendToOpenWRT(allCommands);
 
-    // 📦 CSV'ye kaydet
+    // 📦 Kuralları CSV'ye yaz
     const timestamp = new Date().toISOString();
     const logLines = rules.map(rule => {
       const serialized = JSON.stringify(rule).replace(/"/g, '""');
       return `"${timestamp}","${serialized}"`;
     });
+    fs.appendFileSync(ruleLogPath, logLines.join('\n') + '\n', 'utf8');
 
-    fs.appendFileSync(logPath, logLines.join('\n') + '\n', 'utf8');
-
-    res.json({ success: true, message: 'Trafik yönetimi kuralları başarıyla gönderildi.' });
+    res.json({ success: true, message: 'Trafik kuralları başarıyla gönderildi.' });
   } catch (error) {
     console.error('Trafik kuralları gönderilirken hata:', error);
     res.status(500).json({ error: 'Trafik kuralları gönderilemedi.' });
@@ -42,14 +44,10 @@ router.post('/', async (req, res) => {
 
 // 🔍 GET: Trafik kurallarını listeleme
 router.get('/', async (req, res) => {
-  console.log("get isteği geldi!");
-  
   fetchFirewallRules((err, data) => {
     if (err) {
-      console.error("Firewall kuralları alınamadı:", err.message);
       return res.status(500).json({ error: "Firewall kuralları alınamadı." });
     }
-    console.log("Firewall kuralları alındı:", data);
 
     const allLines = data.split('\n');
     const ruleMap = {};
@@ -66,9 +64,6 @@ router.get('/', async (req, res) => {
     }
 
     const trafficRules = Object.values(ruleMap).filter(rule => rule.name?.startsWith('traffic_'));
-
-    console.log("Trafik kuralları:", trafficRules);
-    
     res.json(trafficRules);
   });
 });
@@ -88,6 +83,28 @@ router.delete('/:uciKey', async (req, res) => {
   } catch (error) {
     console.error('Kural silinirken hata:', error);
     res.status(500).json({ error: 'Kural silinemedi.' });
+  }
+});
+
+// 📥 GET /api/firewall/rules/logs → logread'den eşleşen trafikleri CSV'ye yaz
+router.get('/logs', async (req, res) => {
+  try {
+    const stdout = await fetchLogreadOutput();
+    const lines = stdout.split("\n");
+
+    const matched = lines.filter((line) =>
+      line.includes("FIREWALL_MATCHED_")
+    );
+
+    matched.forEach((line) => {
+      const logLine = `${new Date().toISOString()},${line}\n`;
+      fs.appendFileSync(requestLogPath, logLine, "utf8");
+    });
+
+    res.json({ matched });
+  } catch (err) {
+    console.error("❌ logread SSH hatası:", err.message);
+    res.status(500).json({ error: "Log verisi alınamadı." });
   }
 });
 

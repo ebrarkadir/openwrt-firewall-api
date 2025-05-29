@@ -146,6 +146,8 @@ function buildFirewallRulesCommands({
       /\./g,
       "-"
     )}_${destinationIP.replace(/\./g, "-")}_${timestamp}`;
+    const logPrefix = `FIREWALL_MATCHED_${sourceIP}_${destinationIP}`;
+
     commands.push(
       `uci add firewall rule`,
       `uci set firewall.@rule[-1].name='${ruleName}'`,
@@ -157,7 +159,9 @@ function buildFirewallRulesCommands({
       `uci set firewall.@rule[-1].dest_port='${portRange}'`,
       `uci set firewall.@rule[-1].target='${
         action === "allow" ? "ACCEPT" : "REJECT"
-      }'`
+      }'`,
+      `uci set firewall.@rule[-1].log='1'`,
+      `uci set firewall.@rule[-1].log_prefix='${logPrefix}'`
     );
   });
 
@@ -174,6 +178,7 @@ function buildFirewallDeleteCommand(uciKey) {
     `/etc/init.d/firewall restart`,
   ];
 }
+
 
 // 🔥 ZAMAN BAZLI KURALLAR
 function buildTimeBasedRulesCommands({

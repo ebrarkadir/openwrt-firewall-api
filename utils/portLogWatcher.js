@@ -2,15 +2,20 @@ const fs = require("fs");
 const path = require("path");
 const fetchLogreadOutput = require("./logFetcher");
 
-const requestLogPath = path.join(__dirname, "../logs/port_blocking_requests_log.csv");
+const portLogPath = path.join(__dirname, "../logs/port_blocking_requests_log.csv");
+const firewallLogPath = path.join(__dirname, "../logs/firewall_requests_log.csv");
 
-// 🚨 Klasör kontrol
-const logDir = path.dirname(requestLogPath);
-if (!fs.existsSync(logDir)) {
-  fs.mkdirSync(logDir, { recursive: true });
-}
+const ensureDirExists = (filePath) => {
+  const dir = path.dirname(filePath);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+};
 
-const seenLogs = new Set(); // 👈 Daha önce görülen logları burada tutarız
+ensureDirExists(portLogPath);
+ensureDirExists(firewallLogPath);
+
+const seenLogs = new Set();
 
 function startPortLogWatcher() {
   console.log("📡 portLogWatcher aktif");
@@ -18,21 +23,34 @@ function startPortLogWatcher() {
   setInterval(async () => {
     try {
       const stdout = await fetchLogreadOutput();
-      const lines = stdout.split("\n").filter((line) => line.includes("DPT="));
+      const lines = stdout.split("\n");
 
       lines.forEach((line) => {
-        if (seenLogs.has(line)) return; // 👈 Daha önce yazılmışsa geç
+        if (seenLogs.has(line)) return;
+        seenLogs.add(line);
 
-        seenLogs.add(line); // 👈 Yeni satırı ekle
-        const portMatch = line.match(/DPT=(\d+)/);
-        const port = portMatch ? portMatch[1] : "unknown";
-        const logLine = `${new Date().toISOString()},[PORT:${port}] ${line}\n`;
-        fs.appendFileSync(requestLogPath, logLine, "utf8");
+        const timestamp = new Date().toISOString();
+
+        // 🔎 Port engelleme loglarını yaz
+        if (line.includes("DPT=")) {
+          const portMatch = line.match(/DPT=(\d+)/);
+          const port = portMatch ? portMatch[1] : "unknown";
+          const logLine = `${timestamp},[PORT:${port}] ${line}\n`;
+          fs.appendFileSync(portLogPath, logLine, "utf8");
+        }
+
+        // 🔎 Trafik yönetimi (firewall) loglarını yaz
+        if (line.includes("traffic_")) {
+          const logLine = `${timestamp},[FIREWALL] ${line}\n`;
+          fs.appendFileSync(firewallLogPath, logLine, "utf8");
+        }
+
+        // 🔄 İleride buraya başka kurallar da ekleyebiliriz (dns_, mac_, qos_...)
       });
     } catch (err) {
       console.error("❌ logread hatası:", err.message);
     }
-  }, 5000); // her 5 saniyede bir tekrar
+  }, 5000);
 }
 
 module.exports = startPortLogWatcher;
