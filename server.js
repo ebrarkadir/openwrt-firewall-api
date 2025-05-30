@@ -18,8 +18,8 @@ const firewallRoutes = require('./routes/firewall'); // Firewall Routes doğru g
 const timeBasedRulesRoutes = require('./routes/timeBasedRules');
 const dnsBlockingRoutes = require('./routes/dnsBlocking'); // DNS Blocking Routes doğru geldi
 const qosRulesRoutes = require('./routes/qosRules');
-
-
+const logsRoute = require("./routes/logs");
+const dnsStatsRoutes = require("./routes/dnsStats");
 
 app.use('/api/portblocking/rules', portBlockingRoutes);
 app.use('/api/portforwarding/rules', portForwardingRoutes);
@@ -29,7 +29,8 @@ app.use('/api/timebased/rules', timeBasedRulesRoutes); // 🔥 BURAYA EKLEDİK
 app.use('/api/dnsblocking/rules', dnsBlockingRoutes); // DNS Blocking Routes doğru geldi
 app.use('/api/qos/rules', qosRulesRoutes);
 startPortLogWatcher(); 
-
+app.use("/logs", logsRoute);
+app.use("/api/dnsblocking/stats", dnsStatsRoutes); 
 
 
 app.get('/status', (req, res) => {
