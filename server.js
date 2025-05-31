@@ -22,6 +22,7 @@ const logsRoute = require("./routes/logs");
 const dnsStatsRoutes = require("./routes/dnsStats");
 const firewallStatsRoute = require("./routes/firewallStats");
 const portBlockingStatsRoutes = require("./routes/portBlockingStats");
+const macStatsRoute = require("./routes/macStats");
 
 app.use('/api/portblocking/rules', portBlockingRoutes);
 app.use('/api/portforwarding/rules', portForwardingRoutes);
@@ -35,6 +36,7 @@ app.use("/logs", logsRoute);
 app.use("/api/dnsblocking/stats", dnsStatsRoutes); 
 app.use("/api/firewall/stats", firewallStatsRoute);
 app.use("/api/portblocking/stats", portBlockingStatsRoutes);
+app.use("/api/mac/stats", macStatsRoute);
 
 app.get('/status', (req, res) => {
   res.json({ message: 'API çalışıyor!', timestamp: new Date() });

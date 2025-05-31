@@ -15,8 +15,8 @@ router.get("/", (req, res) => {
 
   lines.forEach((line) => {
     const parts = line.split(",");
-    const logText = parts.slice(1).join(","); // zaman damgası hariç her şey
-    const match = logText.match(/SRC=([\d.]+)/); // SRC= ile IP adresini çek
+    const logText = parts.slice(1).join(","); // zaman damgası hariç
+    const match = logText.match(/SRC=([\d.]+)/); // IP'yi bul
 
     if (match && match[1]) {
       const ip = match[1];
@@ -24,10 +24,12 @@ router.get("/", (req, res) => {
     }
   });
 
-  const data = Object.entries(ipCount).map(([ip, count]) => ({
-    ip,
-    value: count,
-  }));
+  const data = Object.entries(ipCount)
+    .map(([ip, count]) => ({
+      name: ip,   // 🔧 BURASI ip -> name olarak düzeltildi
+      value: count,
+    }))
+    .sort((a, b) => b.value - a.value); // en çok istek olandan başla
 
   res.json(data);
 });
