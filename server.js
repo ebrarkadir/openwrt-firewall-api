@@ -20,6 +20,8 @@ const dnsBlockingRoutes = require('./routes/dnsBlocking'); // DNS Blocking Route
 const qosRulesRoutes = require('./routes/qosRules');
 const logsRoute = require("./routes/logs");
 const dnsStatsRoutes = require("./routes/dnsStats");
+const firewallStatsRoute = require("./routes/firewallStats");
+const portBlockingStatsRoutes = require("./routes/portBlockingStats");
 
 app.use('/api/portblocking/rules', portBlockingRoutes);
 app.use('/api/portforwarding/rules', portForwardingRoutes);
@@ -31,7 +33,8 @@ app.use('/api/qos/rules', qosRulesRoutes);
 startPortLogWatcher(); 
 app.use("/logs", logsRoute);
 app.use("/api/dnsblocking/stats", dnsStatsRoutes); 
-
+app.use("/api/firewall/stats", firewallStatsRoute);
+app.use("/api/portblocking/stats", portBlockingStatsRoutes);
 
 app.get('/status', (req, res) => {
   res.json({ message: 'API çalışıyor!', timestamp: new Date() });
