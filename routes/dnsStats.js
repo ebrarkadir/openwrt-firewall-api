@@ -1,8 +1,8 @@
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
-const router = express.Router();
 
+const router = express.Router();
 const dnsLogPath = path.join(__dirname, "../logs/dns_requests_log.csv");
 
 router.get("/", (req, res) => {
@@ -13,22 +13,26 @@ router.get("/", (req, res) => {
   const lines = fs.readFileSync(dnsLogPath, "utf8").trim().split("\n");
   const domainCount = {};
 
-  lines.forEach(line => {
+  lines.forEach((line) => {
     const parts = line.split(",");
-    if (parts.length < 3) return; // geçersiz satırı atla
+    // CSV satırı: [timestamp, sourceIP | BLOCKED_RESPONSE, domain, typeOrIP]
 
-    const domain = parts[2].trim().toLowerCase();
-    if (domain && domain !== "") {
-      domainCount[domain] = (domainCount[domain] || 0) + 1;
+    if (parts.length >= 3) {
+      const domain = parts[2].trim().toLowerCase();
+      if (domain) {
+        domainCount[domain] = (domainCount[domain] || 0) + 1;
+      }
     }
   });
 
-  const data = Object.entries(domainCount).map(([domain, count]) => ({
-    name: domain,
-    value: count
-  }));
+  const result = Object.entries(domainCount)
+    .map(([domain, count]) => ({
+      name: domain,
+      value: count,
+    }))
+    .sort((a, b) => b.value - a.value); // en çok istek yukarıda
 
-  res.json(data);
+  res.json(result);
 });
 
 module.exports = router;

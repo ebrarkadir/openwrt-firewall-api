@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const axios = require("axios");
 const fetchLogreadOutput = require("./logFetcher");
 
 // 📁 Log dosya yolları
@@ -7,9 +8,6 @@ const portLogPath = path.join(__dirname, "../logs/port_blocking_requests_log.csv
 const firewallLogPath = path.join(__dirname, "../logs/firewall_requests_log.csv");
 const dnsLogPath = path.join(__dirname, "../logs/dns_requests_log.csv");
 const macLogPath = path.join(__dirname, "../logs/mac_requests_log.csv");
-
-// 👮‍♂️ Engellenmiş domainler
-const blockedDomains = ["facebook.com", "www.facebook.com", "instagram.com"];
 
 // 📁 Klasörleri oluştur
 [
@@ -27,11 +25,27 @@ const blockedDomains = ["facebook.com", "www.facebook.com", "instagram.com"];
 // 🔁 Görülen logları hatırla
 const seenLogs = new Set();
 
+// 🧠 Dinamik olarak engellenmiş domainleri API'den al
+async function fetchBlockedDomains() {
+  try {
+    const response = await axios.get("http://localhost:5000/api/dnsblocking/rules");
+    const raw = response.data.rules || [];
+
+    return raw
+      .map((d) => d.trim().toLowerCase())
+      .filter(Boolean); // boşlukları temizle, null'ları çıkar
+  } catch (err) {
+    console.error("❌ Engellenmiş domainler alınamadı:", err.message);
+    return [];
+  }
+}
+
 function startPortLogWatcher() {
   console.log("📡 portLogWatcher aktif");
 
   setInterval(async () => {
     try {
+      const blockedDomains = await fetchBlockedDomains();
       const stdout = await fetchLogreadOutput();
       const lines = stdout.split("\n");
       const timestamp = new Date().toISOString();
@@ -60,25 +74,27 @@ function startPortLogWatcher() {
           fs.appendFileSync(macLogPath, logLine, "utf8");
         }
 
-        // 🌐 DNS query
+        // 🌐 DNS sorgusu loglama
         if (line.includes("dnsmasq") && line.includes("query[")) {
           const match = line.match(/query\[(.*?)\] ([^\s]+) from ([^\s]+)/);
           if (match) {
             const [, type, domain, sourceIP] = match;
-            if (blockedDomains.includes(domain)) {
-              const dnsLogLine = `${timestamp},${sourceIP},${domain},${type}\n`;
+            const normalizedDomain = domain.trim().toLowerCase();
+            if (blockedDomains.some((d) => normalizedDomain.endsWith(d))) {
+              const dnsLogLine = `${timestamp},${sourceIP},${normalizedDomain},${type}\n`;
               fs.appendFileSync(dnsLogPath, dnsLogLine, "utf8");
             }
           }
         }
 
-        // 🧱 DNS blok
+        // 🧱 DNS blok response loglama
         if (line.includes("dnsmasq") && line.includes("config ")) {
           const match = line.match(/config ([^\s]+) is (.+)/);
           if (match) {
             const [, domain, ip] = match;
-            if (blockedDomains.includes(domain)) {
-              const logLine = `${timestamp},BLOCKED_RESPONSE,${domain},${ip}\n`;
+            const normalizedDomain = domain.trim().toLowerCase();
+            if (blockedDomains.some((d) => normalizedDomain.endsWith(d))) {
+              const logLine = `${timestamp},BLOCKED_RESPONSE,${normalizedDomain},${ip}\n`;
               fs.appendFileSync(dnsLogPath, logLine, "utf8");
             }
           }
@@ -87,7 +103,7 @@ function startPortLogWatcher() {
     } catch (err) {
       console.error("❌ logread hatası:", err.message);
     }
-  }, 5000); // her 5 saniyede bir kontrol
+  }, 5000); // her 5 saniyede bir
 }
 
 module.exports = startPortLogWatcher;
