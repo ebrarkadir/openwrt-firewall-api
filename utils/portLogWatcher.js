@@ -9,7 +9,7 @@ const firewallLogPath = path.join(__dirname, "../logs/firewall_requests_log.csv"
 const dnsLogPath = path.join(__dirname, "../logs/dns_requests_log.csv");
 const macLogPath = path.join(__dirname, "../logs/mac_requests_log.csv");
 
-// 📁 Klasörleri oluştur
+// 📁 Gerekli klasörleri oluştur
 [
   portLogPath,
   firewallLogPath,
@@ -22,7 +22,7 @@ const macLogPath = path.join(__dirname, "../logs/mac_requests_log.csv");
   }
 });
 
-// 🔁 Görülen logları hatırla
+// 🔁 Görülen logları tekrar yazmamak için set
 const seenLogs = new Set();
 
 // 🧠 Dinamik olarak engellenmiş domainleri API'den al
@@ -54,7 +54,7 @@ function startPortLogWatcher() {
         if (seenLogs.has(line)) return;
         seenLogs.add(line);
 
-        // 🔥 PORT engelleme
+        // 🔥 PORT log
         if (line.includes("DPT=")) {
           const portMatch = line.match(/DPT=(\d+)/);
           const port = portMatch ? portMatch[1] : "unknown";
@@ -62,38 +62,44 @@ function startPortLogWatcher() {
           fs.appendFileSync(portLogPath, logLine, "utf8");
         }
 
-        // 🔥 FIREWALL trafik
+        // 🧱 FIREWALL log
         if (line.includes("traffic_")) {
           const logLine = `${timestamp},[FIREWALL] ${line}\n`;
           fs.appendFileSync(firewallLogPath, logLine, "utf8");
         }
 
-        // 🔒 MAC engelleme
+        // 🔒 MAC log
         if (line.includes("mac_")) {
           const logLine = `${timestamp},[MAC] ${line}\n`;
           fs.appendFileSync(macLogPath, logLine, "utf8");
         }
 
-        // 🌐 DNS sorgusu loglama
+        // 🌐 DNS query log
         if (line.includes("dnsmasq") && line.includes("query[")) {
           const match = line.match(/query\[(.*?)\] ([^\s]+) from ([^\s]+)/);
           if (match) {
             const [, type, domain, sourceIP] = match;
             const normalizedDomain = domain.trim().toLowerCase();
-            if (blockedDomains.some((d) => normalizedDomain.endsWith(d))) {
+            const isBlocked = blockedDomains.some((blocked) =>
+              normalizedDomain === blocked || normalizedDomain.endsWith("." + blocked)
+            );
+            if (isBlocked) {
               const dnsLogLine = `${timestamp},${sourceIP},${normalizedDomain},${type}\n`;
               fs.appendFileSync(dnsLogPath, dnsLogLine, "utf8");
             }
           }
         }
 
-        // 🧱 DNS blok response loglama
+        // 🚫 DNS blocked cevap log
         if (line.includes("dnsmasq") && line.includes("config ")) {
           const match = line.match(/config ([^\s]+) is (.+)/);
           if (match) {
             const [, domain, ip] = match;
             const normalizedDomain = domain.trim().toLowerCase();
-            if (blockedDomains.some((d) => normalizedDomain.endsWith(d))) {
+            const isBlocked = blockedDomains.some((blocked) =>
+              normalizedDomain === blocked || normalizedDomain.endsWith("." + blocked)
+            );
+            if (isBlocked) {
               const logLine = `${timestamp},BLOCKED_RESPONSE,${normalizedDomain},${ip}\n`;
               fs.appendFileSync(dnsLogPath, logLine, "utf8");
             }
@@ -103,7 +109,7 @@ function startPortLogWatcher() {
     } catch (err) {
       console.error("❌ logread hatası:", err.message);
     }
-  }, 5000); // her 5 saniyede bir
+  }, 5000); // 5 saniyede bir kontrol et
 }
 
 module.exports = startPortLogWatcher;
