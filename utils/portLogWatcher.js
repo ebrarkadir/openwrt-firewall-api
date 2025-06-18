@@ -9,7 +9,7 @@ const firewallLogPath = path.join(__dirname, "../logs/firewall_requests_log.csv"
 const dnsLogPath = path.join(__dirname, "../logs/dns_requests_log.csv");
 const macLogPath = path.join(__dirname, "../logs/mac_requests_log.csv");
 
-// 📁 Gerekli klasörleri oluştur
+// 📁 Klasörleri oluştur
 [
   portLogPath,
   firewallLogPath,
@@ -33,7 +33,7 @@ async function fetchBlockedDomains() {
 
     return raw
       .map((d) => d.trim().toLowerCase())
-      .filter(Boolean); // boşlukları temizle, null'ları çıkar
+      .filter(Boolean);
   } catch (err) {
     console.error("❌ Engellenmiş domainler alınamadı:", err.message);
     return [];
@@ -74,9 +74,9 @@ function startPortLogWatcher() {
           fs.appendFileSync(macLogPath, logLine, "utf8");
         }
 
-        // 🌐 DNS query log
+        // 🌐 DNS sorgu logu
         if (line.includes("dnsmasq") && line.includes("query[")) {
-          const match = line.match(/query\[(.*?)\] ([^\s]+) from ([^\s]+)/);
+          const match = line.match(/query\[(.*?)\]\s+([^\s]+)\s+from\s+([^\s]+)/);
           if (match) {
             const [, type, domain, sourceIP] = match;
             const normalizedDomain = domain.trim().toLowerCase();
@@ -90,9 +90,9 @@ function startPortLogWatcher() {
           }
         }
 
-        // 🚫 DNS blocked cevap log
+        // 🚫 DNS blocked yanıt logu
         if (line.includes("dnsmasq") && line.includes("config ")) {
-          const match = line.match(/config ([^\s]+) is (.+)/);
+          const match = line.match(/config\s+([^\s]+)\s+is\s+(.+)/);
           if (match) {
             const [, domain, ip] = match;
             const normalizedDomain = domain.trim().toLowerCase();
@@ -109,7 +109,7 @@ function startPortLogWatcher() {
     } catch (err) {
       console.error("❌ logread hatası:", err.message);
     }
-  }, 5000); // 5 saniyede bir kontrol et
+  }, 5000); // 5 saniyede bir
 }
 
 module.exports = startPortLogWatcher;
